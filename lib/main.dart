@@ -107,7 +107,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       lastToday = t;
     }
     store.reschedule();
-    store.steps.checkPermission();
+    store.resumeSteps();
   }
 
   Future<void> _maybeSetup() async {

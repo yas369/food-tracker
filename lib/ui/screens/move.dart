@@ -100,17 +100,33 @@ class _MoveScreenState extends State<MoveScreen> {
         AppCard(
           color: p.medSoft,
           child: Row(children: [
-            Expanded(child: Text(!sensor.available ? 'This phone has no step sensor. Log workouts instead.' : 'Step counting needs the “Physical activity” permission.')),
+            Icon(Icons.info_outline, color: p.med),
+            gap12,
+            Expanded(
+              child: Text(!sensor.available
+                  ? 'This phone has no step sensor. Log workouts instead, or type in steps from a watch in Settings below.'
+                  : sensor.blocked
+                      ? 'Step counting is blocked. In Android settings, open Permissions, then Physical activity, and choose Allow.'
+                      : 'Step counting needs the “Physical activity” permission.'),
+            ),
             if (sensor.available)
               TextButton(
                 onPressed: () async {
-                  await store.startMove();
-                  setState(() {});
+                  if (sensor.blocked) {
+                    await sensor.openSettings(); // checked again when you come back
+                  } else {
+                    await store.startMove();
+                  }
                 },
-                child: const Text('Allow'),
+                child: Text(sensor.blocked ? 'Open settings' : 'Allow'),
               ),
           ]),
-        ),
+        )
+      else if (sensor.supported && sensor.lastReading == null)
+        _status(p, Icons.hourglass_empty, 'Waiting for your phone’s step sensor. Walk a few steps and the count will move.'),
+      if (mv.on && (mv.manual[k] ?? -1) >= (mv.days[k] ?? 0))
+        _status(p, Icons.watch_outlined,
+            'Showing the ${fmt(mv.manual[k]!)} steps you typed in from a watch; the phone has counted ${fmt(mv.days[k] ?? 0)}. Clear the watch steps in Settings to use the phone’s count.'),
       AppCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SectionTitle('Workouts today'),
@@ -202,6 +218,15 @@ class _MoveScreenState extends State<MoveScreen> {
       ),
     ]);
   }
+
+  Widget _status(Pal p, IconData icon, String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, size: 18, color: p.muted),
+          const SizedBox(width: 10),
+          Expanded(child: Muted(text)),
+        ]),
+      );
 
   Widget _row(Pal p, String a, String b) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
