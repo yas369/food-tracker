@@ -3,7 +3,7 @@
    Background Sync (Chrome on Android, installed app only). */
 'use strict';
 
-const SHELL = 'plate-check-shell-v2';
+const SHELL = 'plate-check-shell-v3';
 const STATE = 'plate-check-state';
 const FILES = ['./', 'index.html', 'capacitor.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 

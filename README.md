@@ -5,12 +5,19 @@ account, no server, and no data leaves the phone.
 
 ## What it does
 
-- **Daily calorie limit.** Estimated from age, sex, height, weight and
-  activity (Mifflin–St Jeor, about 400 kcal below maintenance to lose weight,
-  never below 1200/1500). You can override it.
+- **Low, medium or high calorie plan.** Your daily limit comes from age, sex,
+  height, weight and activity (Mifflin–St Jeor). Low is about 500 kcal under
+  what you burn, never below 1200/1500. Medium matches what you burn. High is
+  about 300 over, meant for very active days or building muscle. You can also
+  set your own number.
+- **Every food labelled low, medium or high.** Per portion: up to 100 kcal is
+  low, 101–250 medium, over 250 high. You can filter by level. On the Low plan
+  (or when a meal would take you over), picking a high-calorie food offers a
+  lighter swap, like chapati for parotta, or half a portion.
 - **Quick-pick Indian foods.** About 80 common South Indian and Indian items
-  (idli, dosa, sambar, biryani, sundal, filter coffee…) with typical
-  home-portion calories, recent foods at the top, and custom foods.
+  (idli, dosa, sambar, biryani, sundal, filter coffee…) as a shop-style grid:
+  tap ADD, adjust with − / +, then add everything from the green bar at the bottom.
+  Recent foods come first, and you can add your own.
 - **Hunger check before logging.** A 1–5 scale. At 1–2 it suggests water and a
   10-minute wait, then checks back.
 - **Warnings before you eat, not after.** The add button shows where the meal
@@ -20,8 +27,9 @@ account, no server, and no data leaves the phone.
   vegetables, no protein, repeated eating when not hungry, late-night eating.
 - **Daily "Why it matters" tip.** Worded only as strongly as its source (WHO,
   ICMR-NIN) supports.
-- **History.** A 14-day chart against the limit, 7-day stats, and plain-language
-  insights (biggest meal, % eaten without hunger, top calorie source).
+- **Progress.** Streak and weekly stats, a 14-day chart against your limit, a
+  donut of calories from low / medium / high foods, a split by meal, and
+  plain-language insights.
 
 ## Install on your Android phone
 
