@@ -415,6 +415,7 @@ label.field > span { display: block; margin-bottom: 4px; color: var(--muted); fo
 .dtotal { margin: 16px 0; position: relative; z-index: 1; }
 .dtotal b { font-size: 36px; font-weight: 900; display: block; line-height: 1.1; }
 .dtotal span { color: rgba(255,255,255,.8); font-size: 14px; }
+.dchoice { position: relative; z-index: 1; display: inline-block; background: rgba(255,255,255,.14); border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 700; }
 .plate-wrap { display: flex; align-items: center; gap: 16px; }
 .plate { width: 116px; height: 116px; flex: none; }
 .plate-legend { display: grid; gap: 10px; flex: 1; min-width: 0; }
@@ -538,14 +539,14 @@ header.top h1 { font-size: 18px; white-space: nowrap; overflow: hidden; text-ove
     <div class="hero dhero">
       <div class="seg dseg" id="dietDays" role="group" aria-label="Day"></div>
       <div class="dtotal"><b class="num" id="dietTotal">–</b><span id="dietSub"></span></div>
-      <div class="seg dseg" id="dietPrefs" role="group" aria-label="Food preference"></div>
+      <div class="dchoice" id="dietChoice"></div>
     </div>
     <div class="card kitchen">
       <div class="meal-head"><div class="meal-ico" style="background:var(--green-soft)">🧺</div>
         <div class="meal-title"><b>Your kitchen</b><span id="kitchenCount"></span></div>
-        <button class="add-btn" id="kitchenEdit">EDIT</button></div>
+        </div>
       <div class="ksum" id="kitchenSummary"></div>
-      <p class="muted small" style="margin:8px 0 0">Plans only use what you have at home.</p>
+      <p class="muted small" style="margin:8px 0 0">Plans only use what you have at home. To change it, go to <a href="#" data-gome>Me</a>.</p>
     </div>
     <div class="card plate-card">
       <h2>🍽️ How to fill your plate</h2>
@@ -651,6 +652,11 @@ header.top h1 { font-size: 18px; white-space: nowrap; overflow: hidden; text-ove
       <button class="add-btn" id="meEdit">EDIT</button>
       <div class="me-stats" id="meStats"></div>
     </div>
+    <div class="card">
+      <h2>🍽️ Your choices</h2>
+      <p class="muted small" style="margin-top:0">Set once. The app won’t ask again; change them here whenever you like.</p>
+      <div id="meChoices"></div>
+    </div>
     <div class="card welcome" id="welcomeCard" hidden>
       <h2>👋 Welcome to Plate Check</h2>
       <p>Pick a plan and set your numbers. Your daily calorie limit is worked out from them.</p>
@@ -724,7 +730,7 @@ header.top h1 { font-size: 18px; white-space: nowrap; overflow: hidden; text-ove
       <h2>🧘 Habits</h2>
       <div class="switch-row">
         <div class="rico">🤔</div>
-        <div class="grow"><strong>Ask how hungry I am</strong><br><span class="muted small">A one-tap hunger check before logging. If you're not really hungry, it suggests waiting 10 minutes.</span></div>
+        <div class="grow"><strong>Ask how hungry I am</strong><br><span class="muted small">A one-tap check before snacks and off-time meals. If you're not really hungry, it suggests waiting 10 minutes. Meals at their usual time are never asked.</span></div>
         <input type="checkbox" class="toggle" id="hungerToggle" aria-label="Ask how hungry I am">
       </div>
       <div class="switch-row">
@@ -1355,9 +1361,19 @@ let add = null; // { meal, hunger, tray: Map(foodId -> qty), q, cat, lv, last }
 function openAdd(meal, opts = {}) {
   if (!dailyTarget()) { showView('settings'); toast('Set up your goal first'); return; }
   add = { meal: meal || mealForNow(), hunger: null, tray: new Map(), q: '', cat: '', lv: '', last: null };
-  const askHunger = state.settings.hungerCheck && viewDay === todayKey() && !opts.skipHunger;
+  const askHunger = state.settings.hungerCheck && viewDay === todayKey() && !opts.skipHunger && offSchedule(add.meal);
   $('#addDialog').showModal();
   if (askHunger) renderHunger(); else renderPicker();
+}
+/* Eating a meal at its usual time needs no questions. Snacks, and meals
+   well away from their reminder time, are where overeating tends to start,
+   so only those get the hunger check. */
+function offSchedule(meal) {
+  if (meal === 'snack') return true;
+  const r = state.settings.reminders.find(x => x.meal === meal);
+  if (!r) return false;
+  const now = new Date(), mins = now.getHours() * 60 + now.getMinutes();
+  return Math.abs(mins - minutesOf(r.time)) > 90;
 }
 function closeAdd() { $('#addDialog').close(); add = null; }
 $('#addClose').onclick = closeAdd;
@@ -1676,7 +1692,7 @@ function renderDiet() {
   const target = baseTarget();
   const isToday = dietDay === t;
   $('#dietDays').innerHTML = [0, 1, 2].map(n => { const k = dayKeyOffset(t, n); return '<button data-dday="' + k + '" aria-pressed="' + (k === dietDay) + '">' + (n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : parseKey(k).toLocaleDateString('en-IN', { weekday: 'short' })) + '</button>'; }).join('');
-  $('#dietPrefs').innerHTML = DIET_PREFS.map(p => '<button data-dpref="' + p.id + '" aria-pressed="' + (dietPref() === p.id) + '">' + p.label + '</button>').join('');
+  $('#dietChoice').textContent = DIET_PREFS.find(p => p.id === dietPref()).label + ' · from your profile';
   const plans = MEALS.map(m => ({ m, plan: planFor(dietDay, m.id) }));
   const dayTotal = plans.reduce((a, x) => a + (x.plan ? x.plan.kcal : 0), 0);
   $('#dietTotal').textContent = target ? fmt(dayTotal) : '–';
@@ -1688,7 +1704,7 @@ function renderDiet() {
   const times = {};
   state.settings.reminders.forEach(r => { if (r.meal) times[r.meal] = r.time; });
   $('#dietMeals').innerHTML = plans.map(({ m, plan }) => {
-    if (!plan) return target ? '<div class="card meal dmeal"><div class="meal-head"><div class="meal-ico" style="background:' + m.tint + '">' + m.emoji + '</div><div class="meal-title"><b>' + m.label + '</b><span class="muted">Nothing in your kitchen fits this meal.</span></div></div><button class="btn slim" data-kitchen style="margin-top:10px">🧺 Update my kitchen</button></div>' : '';
+    if (!plan) return target ? '<div class="card meal dmeal"><div class="meal-head"><div class="meal-ico" style="background:' + m.tint + '">' + m.emoji + '</div><div class="meal-title"><b>' + m.label + '</b><span class="muted">Nothing in your kitchen fits this meal.</span></div></div><button class="btn slim" data-gome style="margin-top:10px">🧺 Update my kitchen in Me</button></div>' : '';
     const done = logged.has(m.id);
     const tm = times[m.id] ? new Date('2000-01-01T' + times[m.id]).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '';
     return '<div class="card meal dmeal">' +
@@ -1704,10 +1720,9 @@ function renderDiet() {
 }
 $('#view-diet').addEventListener('click', e => {
   const d = e.target.closest('[data-dday]'); if (d) { dietDay = d.dataset.dday; renderDiet(); return; }
-  const p = e.target.closest('[data-dpref]'); if (p) { state.settings.dietPref = p.dataset.dpref; save(); renderDiet(); return; }
   const n = e.target.closest('[data-dnext]'); if (n) { nextOption(dietDay, n.dataset.dnext); renderDiet(); return; }
   const l = e.target.closest('[data-dlog]'); if (l) { logPlan(l.dataset.dlog); renderDiet(); return; }
-  if (e.target.closest('[data-kitchen]')) openKitchen();
+  if (e.target.closest('[data-gome]')) { e.preventDefault(); showView('settings'); }
 });
 
 /* ---------- History ---------- */
@@ -2233,6 +2248,11 @@ function renderMe() {
     if (i === 0 && !n) continue;
     if (n && sumKcal(state.log[k]) <= dailyTarget(k)) streak++; else break;
   }
+  const have = [...pantry()];
+  $('#meChoices').innerHTML =
+    '<div class="switch-row"><div class="rico">🥗</div><div class="grow"><strong>I eat</strong><br><span class="muted small">' + DIET_PREFS.find(p => p.id === dietPref()).label + '</span></div><button class="btn slim" data-change="pref">Change</button></div>' +
+    '<div class="switch-row"><div class="rico">🧺</div><div class="grow"><strong>My kitchen</strong><br><span class="muted small">' + have.length + ' items · ' + have.slice(0, 8).map(id => PANTRY_INFO[id] ? PANTRY_INFO[id].e : '').join(' ') + '</span></div><button class="btn slim" data-change="kitchen">Change</button></div>' +
+    '<div class="switch-row"><div class="rico">🙂</div><div class="grow"><strong>Name and photo</strong><br><span class="muted small">' + esc(state.me.name || 'Not set') + '</span></div><button class="btn slim" data-change="profile">Change</button></div>';
   $('#meStats').innerHTML =
     '<div><b class="num">' + days + '</b><span>days logged</span></div>' +
     '<div><b class="num">' + streak + '</b><span>day streak</span></div>' +
@@ -2244,7 +2264,7 @@ function renderMe() {
    what's in your kitchen. The same screens reopen on their own later. */
 let ob = null; // { mode: 'onboard'|'profile'|'kitchen', step, name, photo, pref, have:Set }
 function openOnboarding(mode = 'onboard') {
-  ob = { mode, step: mode === 'kitchen' ? 2 : 0, name: state.me.name || '', photo: state.me.photo || '', pref: dietPref(), have: pantry() };
+  ob = { mode, step: mode === 'kitchen' ? 2 : mode === 'pref' ? 1 : 0, name: state.me.name || '', photo: state.me.photo || '', pref: dietPref(), have: pantry() };
   $('#obClose').hidden = mode === 'onboard' && !state.me.onboarded;
   $('#onboard').showModal();
   renderOb();
@@ -2292,23 +2312,24 @@ function renderOb() {
   body.scrollTop = 0;
 }
 function finishOb() {
-  if (ob.mode !== 'kitchen') {
+  if (ob.mode === 'onboard' || ob.mode === 'profile') {
     state.me.name = ob.name.trim();
     state.me.photo = ob.photo;
   }
+  if (ob.mode === 'pref') state.settings.dietPref = ob.pref;
   if (ob.mode === 'onboard') {
     state.settings.dietPref = ob.pref;
     state.me.onboarded = true;
     state.me.since = state.me.since || Date.now();
   }
-  if (ob.mode !== 'profile') state.pantry = [...ob.have];
+  if (ob.mode === 'onboard' || ob.mode === 'kitchen') state.pantry = [...ob.have];
   const mode = ob.mode;
   save();
   $('#onboard').close();
   ob = null;
   renderBar();
   if (mode === 'onboard' && !state.profile) { showView('settings'); toast('Last step: your body numbers and goal'); }
-  else { renderAll(); toast(mode === 'kitchen' ? 'Kitchen saved 🧺' : 'Saved'); }
+  else { renderAll(); toast(mode === 'kitchen' ? 'Kitchen saved 🧺' : mode === 'pref' ? 'Food choice saved' : 'Saved'); }
 }
 $('#obNext').onclick = () => {
   if (ob.step === 0 && ob.mode === 'onboard' && !ob.name.trim()) { toast('Add your name, or anything you like to be called'); $('#obName').focus(); return; }
@@ -2318,9 +2339,10 @@ $('#obNext').onclick = () => {
 $('#obClose').onclick = () => { $('#onboard').close(); ob = null; };
 $('#onboard').addEventListener('cancel', e => { if (!state.me.onboarded) e.preventDefault(); else ob = null; });
 $('#meEdit').onclick = () => openOnboarding('profile');
+$('#meChoices').addEventListener('click', e => { const b = e.target.closest('[data-change]'); if (b) openOnboarding(b.dataset.change); });
 $('#meAvatar').onclick = () => openOnboarding('profile');
 $('#barAvatar').onclick = () => showView('settings');
-$('#kitchenEdit').onclick = openKitchen;
+
 function renderBar() {
   $('#barAvatar').innerHTML = avatarHtml();
 }
