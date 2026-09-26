@@ -105,8 +105,6 @@ double sumKcal(Iterable<Entry> entries) => entries.fold(0.0, (a, e) => a + e.tot
 double stepFor(Food f) =>
     RegExp(r'cup|plate|bowl|glass|100 g|handful|tumbler|scoop|ml', caseSensitive: false).hasMatch(f.unit) ? 0.5 : 1;
 
-String emojiFor(String id, String cat) => foodEmoji[id] ?? catEmoji[cat] ?? '🍽️';
-
 // ---------- Limits ----------
 
 class Estimate {

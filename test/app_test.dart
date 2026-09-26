@@ -44,10 +44,10 @@ void main() {
   smallPhoneTests();
   testWidgets('first run: three setup screens, then the goal, then Today', (tester) async {
     final store = await start(tester);
-    expect(find.text('Welcome! 👋'), findsOneWidget);
+    expect(find.text('Welcome'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.text('Welcome! 👋'), findsOneWidget, reason: 'a name is needed');
+    expect(find.text('Welcome'), findsOneWidget, reason: 'a name is needed');
     await tester.enterText(find.byType(TextField), 'Yaswanth C');
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
@@ -65,14 +65,14 @@ void main() {
     await settle(tester);
     // Defaults (30 y, 165 cm, 70 kg, light activity) on the low plan.
     expect(store.c.baseTarget, 1680);
-    expect(find.text('Good afternoon, Yaswanth 👋'), findsOneWidget);
+    expect(find.text('Good afternoon, Yaswanth'), findsOneWidget);
     // Never asked again
-    expect(find.text('Welcome! 👋'), findsNothing);
+    expect(find.text('Welcome'), findsNothing);
   });
 
   testWidgets('lunch at lunchtime skips the hunger check; logging updates the day', (tester) async {
     final store = await start(tester, data: ready());
-    expect(find.text('Welcome! 👋'), findsNothing);
+    expect(find.text('Welcome'), findsNothing);
     await tester.tap(find.text('Add food'));
     await tester.pumpAndSettle();
     expect(find.text('Add to Lunch'), findsOneWidget);
@@ -101,7 +101,7 @@ void main() {
     await tester.tap(find.text('Not hungry'));
     await tester.pumpAndSettle();
     expect(find.text('You’re not really hungry'), findsOneWidget);
-    await tester.tap(find.text('💧 Wait 10 minutes'));
+    await tester.tap(find.text('Wait 10 minutes'));
     await settle(tester);
     final n = store.notifications as FakeNotifications;
     expect(n.once.single.$2, DateTime(2026, 9, 26, 13, 20));
@@ -127,14 +127,14 @@ void main() {
     final store = await start(tester, data: ready());
     await tester.tap(find.text('Diet'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('fits your 1,890 limit · 🥦 Veg'), findsOneWidget);
+    expect(find.textContaining('fits your 1,890 limit · Veg'), findsOneWidget);
     final planned = store.c.planFor('2026-09-26', 'breakfast')!;
-    await tester.ensureVisible(find.text('✓ I ate this').first);
+    await tester.ensureVisible(find.text('I ate this').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('✓ I ate this').first);
+    await tester.tap(find.text('I ate this').first);
     await settle(tester);
     expect(store.d.log['2026-09-26']!.length, planned.items.length);
-    expect(find.textContaining('✓ Logged'), findsOneWidget, reason: 'a logged meal shrinks to one line');
+    expect(find.textContaining('Logged ·'), findsOneWidget, reason: 'a logged meal shrinks to one line');
     await tester.tap(find.text('Undo'));
     await settle(tester);
     expect(store.d.log['2026-09-26'], isNull, reason: 'undo removes the whole meal');
@@ -144,6 +144,8 @@ void main() {
     final d = ready();
     d.log['2026-09-26'] = [const Entry(f: 'idli', name: 'Idli', unit: '1 piece', kcal: 60, tags: [], qty: 3, meal: 'breakfast', hunger: null, b: 'a', t: 0)];
     final store = await start(tester, data: d);
+    await tester.ensureVisible(find.text('Breakfast'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Breakfast'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Idli'));
@@ -155,6 +157,8 @@ void main() {
     await settle(tester);
     expect(store.d.log['2026-09-26']!.single.qty, 2);
     await tester.pump(const Duration(seconds: 6)); // the message closes by itself
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('Remove Idli')); // clear of the Add food button
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Remove Idli'));
     await settle(tester);
@@ -190,9 +194,9 @@ void main() {
     await tester.tap(find.text('Start tracking'));
     await settle(tester);
     expect(store.c.baseTarget, 1590);
-    await tester.ensureVisible(find.text('+ Add a workout'));
+    await tester.ensureVisible(find.text('Add a workout'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('+ Add a workout'));
+    await tester.tap(find.text('Add a workout'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Yoga'));
     await tester.pumpAndSettle();

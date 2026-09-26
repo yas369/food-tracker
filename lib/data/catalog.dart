@@ -1,23 +1,5 @@
-// Everything the app knows about food, meals, plans and movement.
-
-/// A picture for every food, so the list reads like a menu rather than a form.
-const foodEmoji = <String, String>{
-  'idli': '🍚', 'dosa': '🫓', 'masaladosa': '🌯', 'gheeroast': '🫓', 'ravadosa': '🫓', 'uthappam': '🥞', 'pesarattu': '🥞', 'ragidosa': '🫓',
-  'pongal': '🍲', 'upma': '🥣', 'poori': '🫓', 'chapati': '🫓', 'parotta': '🥐', 'appam': '🥞', 'idiyappam': '🍜', 'vada': '🍩', 'oats': '🥣',
-  'rice': '🍚', 'brownrice': '🍚', 'curdrice': '🍚', 'lemonrice': '🍛', 'sambarrice': '🍛', 'vegbiryani': '🍛', 'chkbiryani': '🍗', 'meals': '🍱', 'friedrice': '🍜',
-  'sambar': '🥘', 'rasam': '🍵', 'dal': '🥣', 'kootu': '🥘', 'poriyal': '🥦', 'avial': '🥕', 'kurma': '🍛', 'salad': '🥗', 'cchutney': '🥥', 'tchutney': '🍅',
-  'curd': '🥛', 'paneer': '🧀', 'appalam': '🍘', 'ghee': '🧈', 'oil': '🫗',
-  'egg': '🥚', 'omelette': '🍳', 'chkcurry': '🍗', 'chk65': '🍗', 'fishcurry': '🐟', 'fishfry': '🐟', 'mutton': '🍖',
-  'sundal': '🫘', 'nuts': '🥜', 'murukku': '🥨', 'bajji': '🧆', 'samosa': '🥟', 'puffs': '🥐', 'biscuit': '🍪', 'chips': '🍟',
-  'laddu': '🟠', 'mysorepak': '🍰', 'payasam': '🍮', 'jamun': '🟤', 'kesari': '🍰', 'chocolate': '🍫', 'icecream': '🍨',
-  'tea': '☕', 'coffee': '☕', 'blackcoffee': '☕', 'milk': '🥛', 'buttermilk': '🥛', 'juice': '🧃', 'soda': '🥤', 'tender': '🥥',
-  'banana': '🍌', 'apple': '🍎', 'guava': '🍐', 'papaya': '🍈', 'orange': '🍊', 'mango': '🥭', 'watermelon': '🍉',
-};
-
-const catEmoji = <String, String>{
-  'Tiffin': '🫓', 'Rice & meals': '🍛', 'Curries & sides': '🥘', 'Egg, meat & fish': '🍗',
-  'Snacks': '🥨', 'Sweets': '🍬', 'Drinks': '🥤', 'Fruit': '🍎', 'My foods': '⭐',
-};
+// Everything the app knows about food, meals, plans and movement. Pictures
+// for these live in ui/icons.dart: the app shows icons, never emoji.
 
 /// Lighter options offered when a high-calorie food goes in on the Low plan.
 const swaps = <String, String>{
@@ -31,85 +13,80 @@ enum Tint { med, green, high, brand }
 class MealInfo {
   final String id;
   final String label;
-  final String emoji;
   final double share;
   final Tint tint;
-  const MealInfo(this.id, this.label, this.emoji, this.share, this.tint);
+  const MealInfo(this.id, this.label, this.share, this.tint);
 }
 
 const meals = <MealInfo>[
-  MealInfo('breakfast', 'Breakfast', '🌅', .25, Tint.med),
-  MealInfo('lunch', 'Lunch', '☀️', .35, Tint.green),
-  MealInfo('snack', 'Snacks', '🍪', .10, Tint.high),
-  MealInfo('dinner', 'Dinner', '🌙', .30, Tint.brand),
+  MealInfo('breakfast', 'Breakfast', .25, Tint.med),
+  MealInfo('lunch', 'Lunch', .35, Tint.green),
+  MealInfo('snack', 'Snacks', .10, Tint.high),
+  MealInfo('dinner', 'Dinner', .30, Tint.brand),
 ];
 
 MealInfo mealInfo(String id) => meals.firstWhere((m) => m.id == id, orElse: () => meals[2]);
 
 class HungerLevel {
   final int v;
-  final String emoji;
   final String title;
   final String desc;
   final Tint tint;
-  const HungerLevel(this.v, this.emoji, this.title, this.desc, this.tint);
+  const HungerLevel(this.v, this.title, this.desc, this.tint);
 }
 
 const hungerLevels = <HungerLevel>[
-  HungerLevel(1, '😌', 'Not hungry', 'Eating because it’s there, or out of habit', Tint.brand),
-  HungerLevel(2, '🙂', 'A little peckish', 'Could wait an hour easily', Tint.brand),
-  HungerLevel(3, '😋', 'Hungry', 'Ready for a meal', Tint.green),
-  HungerLevel(4, '😣', 'Very hungry', 'Stomach growling, hard to focus', Tint.med),
-  HungerLevel(5, '😫', 'Starving', 'Shaky or irritable. Eat something now', Tint.high),
+  HungerLevel(1, 'Not hungry', 'Eating because it’s there, or out of habit', Tint.brand),
+  HungerLevel(2, 'A little peckish', 'Could wait an hour easily', Tint.brand),
+  HungerLevel(3, 'Hungry', 'Ready for a meal', Tint.green),
+  HungerLevel(4, 'Very hungry', 'Stomach growling, hard to focus', Tint.med),
+  HungerLevel(5, 'Starving', 'Shaky or irritable. Eat something now', Tint.high),
 ];
 
 class PlanInfo {
   final String id;
-  final String emoji;
   final String name;
   final String desc;
   final Tint tint;
-  const PlanInfo(this.id, this.emoji, this.name, this.desc, this.tint);
+  const PlanInfo(this.id, this.name, this.desc, this.tint);
 }
 
 /// Low is the plan built for not overeating; High is for very active days or
 /// building muscle, and says so.
 const plans = <PlanInfo>[
-  PlanInfo('low', '🥗', 'Low calorie', 'Lose weight slowly · about 500 kcal under what you burn', Tint.green),
-  PlanInfo('medium', '⚖️', 'Medium calorie', 'Stay where you are · matches what you burn', Tint.med),
-  PlanInfo('high', '💪', 'High calorie', 'Very active or building muscle · about 300 kcal over', Tint.high),
+  PlanInfo('low', 'Low calorie', 'Lose weight slowly · about 500 kcal under what you burn', Tint.green),
+  PlanInfo('medium', 'Medium calorie', 'Stay where you are · matches what you burn', Tint.med),
+  PlanInfo('high', 'High calorie', 'Very active or building muscle · about 300 kcal over', Tint.high),
 ];
 
 PlanInfo planInfo(String id) => plans.firstWhere((p) => p.id == id, orElse: () => plans[0]);
 
 class ActivityInfo {
   final double v;
-  final String emoji;
   final String title;
   final String desc;
-  const ActivityInfo(this.v, this.emoji, this.title, this.desc);
+  const ActivityInfo(this.v, this.title, this.desc);
 }
 
 const activities = <ActivityInfo>[
-  ActivityInfo(1.2, '🪑', 'Mostly sitting', 'Desk job, little walking'),
-  ActivityInfo(1.375, '🚶', 'Light', 'Yoga or walks 1–3 days'),
-  ActivityInfo(1.55, '🏃', 'Moderate', 'Exercise 3–5 days'),
-  ActivityInfo(1.725, '🏋️', 'Very active', 'Hard exercise most days'),
+  ActivityInfo(1.2, 'Mostly sitting', 'Desk job, little walking'),
+  ActivityInfo(1.375, 'Light', 'Yoga or walks 1–3 days'),
+  ActivityInfo(1.55, 'Moderate', 'Exercise 3–5 days'),
+  ActivityInfo(1.725, 'Very active', 'Hard exercise most days'),
 ];
 
 class DietPref {
   final String id;
-  final String emoji;
   final String short;
   final String title;
   final String desc;
-  const DietPref(this.id, this.emoji, this.short, this.title, this.desc);
+  const DietPref(this.id, this.short, this.title, this.desc);
 }
 
 const dietPrefs = <DietPref>[
-  DietPref('veg', '🥦', 'Veg', 'Vegetarian', 'No eggs, meat or fish'),
-  DietPref('egg', '🥚', 'Egg', 'Eggetarian', 'Vegetarian plus eggs'),
-  DietPref('nonveg', '🍗', 'Non-veg', 'Non-vegetarian', 'Eggs, chicken and fish too'),
+  DietPref('veg', 'Veg', 'Vegetarian', 'No eggs, meat or fish'),
+  DietPref('egg', 'Egg', 'Eggetarian', 'Vegetarian plus eggs'),
+  DietPref('nonveg', 'Non-veg', 'Non-vegetarian', 'Eggs, chicken and fish too'),
 ];
 
 DietPref dietPrefInfo(String id) => dietPrefs.firstWhere((p) => p.id == id, orElse: () => dietPrefs[0]);
@@ -117,25 +94,24 @@ DietPref dietPrefInfo(String id) => dietPrefs.firstWhere((p) => p.id == id, orEl
 /// Workouts, with MET values from the Compendium of Physical Activities.
 class WorkoutInfo {
   final String id;
-  final String emoji;
   final String title;
   final double met;
-  const WorkoutInfo(this.id, this.emoji, this.title, this.met);
+  const WorkoutInfo(this.id, this.title, this.met);
 }
 
 const workouts = <WorkoutInfo>[
-  WorkoutInfo('walk', '🚶', 'Brisk walk', 4.3),
-  WorkoutInfo('yoga', '🧘', 'Yoga', 2.5),
-  WorkoutInfo('surya', '☀️', 'Surya namaskar', 3.3),
-  WorkoutInfo('jog', '🏃', 'Jogging', 7.0),
-  WorkoutInfo('cycle', '🚴', 'Cycling', 6.8),
-  WorkoutInfo('gym', '🏋️', 'Weights', 3.5),
-  WorkoutInfo('dance', '💃', 'Dance', 5.0),
-  WorkoutInfo('swim', '🏊', 'Swimming', 6.0),
-  WorkoutInfo('badminton', '🏸', 'Badminton', 5.5),
-  WorkoutInfo('cricket', '🏏', 'Cricket', 4.8),
-  WorkoutInfo('skip', '🪢', 'Skipping', 11.8),
-  WorkoutInfo('house', '🧹', 'Housework', 3.5),
+  WorkoutInfo('walk', 'Brisk walk', 4.3),
+  WorkoutInfo('yoga', 'Yoga', 2.5),
+  WorkoutInfo('surya', 'Surya namaskar', 3.3),
+  WorkoutInfo('jog', 'Jogging', 7.0),
+  WorkoutInfo('cycle', 'Cycling', 6.8),
+  WorkoutInfo('gym', 'Weights', 3.5),
+  WorkoutInfo('dance', 'Dance', 5.0),
+  WorkoutInfo('swim', 'Swimming', 6.0),
+  WorkoutInfo('badminton', 'Badminton', 5.5),
+  WorkoutInfo('cricket', 'Cricket', 4.8),
+  WorkoutInfo('skip', 'Skipping', 11.8),
+  WorkoutInfo('house', 'Housework', 3.5),
 ];
 
 WorkoutInfo? workoutInfo(String id) {
@@ -148,9 +124,8 @@ WorkoutInfo? workoutInfo(String id) {
 /// The kitchen: what's usually at home. Plans only use these.
 class PantryItem {
   final String id;
-  final String emoji;
   final String label;
-  const PantryItem(this.id, this.emoji, this.label);
+  const PantryItem(this.id, this.label);
 }
 
 class PantryGroup {
@@ -161,28 +136,28 @@ class PantryGroup {
 
 const pantryGroups = <PantryGroup>[
   PantryGroup('Grains & batter', [
-    PantryItem('rice', '🍚', 'Rice'), PantryItem('atta', '🌾', 'Atta (wheat flour)'), PantryItem('batter', '🥣', 'Idli / dosa batter'),
-    PantryItem('rava', '🥣', 'Rava'), PantryItem('ragi', '🟤', 'Ragi flour'), PantryItem('oats', '🥣', 'Oats'), PantryItem('riceflour', '🍜', 'Idiyappam / rice flour'),
+    PantryItem('rice', 'Rice'), PantryItem('atta', 'Atta (wheat flour)'), PantryItem('batter', 'Idli / dosa batter'),
+    PantryItem('rava', 'Rava'), PantryItem('ragi', 'Ragi flour'), PantryItem('oats', 'Oats'), PantryItem('riceflour', 'Idiyappam / rice flour'),
   ]),
   PantryGroup('Dal & pulses', [
-    PantryItem('dal', '🫘', 'Toor / moong dal'), PantryItem('chana', '🫘', 'Chana / chickpeas'), PantryItem('greengram', '🟢', 'Whole green gram'),
+    PantryItem('dal', 'Toor / moong dal'), PantryItem('chana', 'Chana / chickpeas'), PantryItem('greengram', 'Whole green gram'),
   ]),
   PantryGroup('Milk, eggs & meat', [
-    PantryItem('milk', '🥛', 'Milk'), PantryItem('curd', '🥣', 'Curd'), PantryItem('paneer', '🧀', 'Paneer'),
-    PantryItem('eggs', '🥚', 'Eggs'), PantryItem('chicken', '🍗', 'Chicken'), PantryItem('fish', '🐟', 'Fish'),
+    PantryItem('milk', 'Milk'), PantryItem('curd', 'Curd'), PantryItem('paneer', 'Paneer'),
+    PantryItem('eggs', 'Eggs'), PantryItem('chicken', 'Chicken'), PantryItem('fish', 'Fish'),
   ]),
   PantryGroup('Vegetables', [
-    PantryItem('beans', '🫛', 'Beans'), PantryItem('carrot', '🥕', 'Carrot'), PantryItem('cabbage', '🥬', 'Cabbage'), PantryItem('beetroot', '🟣', 'Beetroot'),
-    PantryItem('keerai', '🌿', 'Keerai / spinach'), PantryItem('okra', '🫑', 'Vendakkai / okra'), PantryItem('brinjal', '🍆', 'Brinjal'),
-    PantryItem('drumstick', '🥢', 'Drumstick'), PantryItem('pumpkin', '🎃', 'Pumpkin'), PantryItem('potato', '🥔', 'Potato'),
-    PantryItem('tomato', '🍅', 'Tomato'), PantryItem('onion', '🧅', 'Onion'), PantryItem('cucumber', '🥒', 'Cucumber'),
+    PantryItem('beans', 'Beans'), PantryItem('carrot', 'Carrot'), PantryItem('cabbage', 'Cabbage'), PantryItem('beetroot', 'Beetroot'),
+    PantryItem('keerai', 'Keerai / spinach'), PantryItem('okra', 'Vendakkai / okra'), PantryItem('brinjal', 'Brinjal'),
+    PantryItem('drumstick', 'Drumstick'), PantryItem('pumpkin', 'Pumpkin'), PantryItem('potato', 'Potato'),
+    PantryItem('tomato', 'Tomato'), PantryItem('onion', 'Onion'), PantryItem('cucumber', 'Cucumber'),
   ]),
   PantryGroup('Fruit', [
-    PantryItem('banana', '🍌', 'Banana'), PantryItem('apple', '🍎', 'Apple'), PantryItem('guava', '🍐', 'Guava'), PantryItem('papaya', '🍈', 'Papaya'),
-    PantryItem('orange', '🍊', 'Orange / sathukudi'), PantryItem('mango', '🥭', 'Mango'), PantryItem('watermelon', '🍉', 'Watermelon'),
+    PantryItem('banana', 'Banana'), PantryItem('apple', 'Apple'), PantryItem('guava', 'Guava'), PantryItem('papaya', 'Papaya'),
+    PantryItem('orange', 'Orange / sathukudi'), PantryItem('mango', 'Mango'), PantryItem('watermelon', 'Watermelon'),
   ]),
   PantryGroup('Nuts & others', [
-    PantryItem('peanuts', '🥜', 'Peanuts'), PantryItem('almonds', '🌰', 'Almonds'), PantryItem('cashews', '🥜', 'Cashews'), PantryItem('coconut', '🥥', 'Coconut'),
+    PantryItem('peanuts', 'Peanuts'), PantryItem('almonds', 'Almonds'), PantryItem('cashews', 'Cashews'), PantryItem('coconut', 'Coconut'),
   ]),
 ];
 

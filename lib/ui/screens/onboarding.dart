@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../data/catalog.dart';
 import '../../models.dart';
 import '../../store.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -57,16 +58,16 @@ class _SetupScreenState extends State<SetupScreen> {
         showDragHandle: true,
         builder: (ctx) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ListTile(leading: const Text('📷', style: TextStyle(fontSize: 22)), title: const Text('Take a photo'), onTap: () {
+            ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Take a photo'), onTap: () {
               Navigator.pop(ctx);
               _pickPhoto(ImageSource.camera);
             }),
-            ListTile(leading: const Text('🖼️', style: TextStyle(fontSize: 22)), title: const Text('Choose from gallery'), onTap: () {
+            ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose from gallery'), onTap: () {
               Navigator.pop(ctx);
               _pickPhoto(ImageSource.gallery);
             }),
             if (photo.isNotEmpty)
-              ListTile(leading: const Text('🗑️', style: TextStyle(fontSize: 22)), title: const Text('Remove photo'), onTap: () {
+              ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Remove photo'), onTap: () {
                 Navigator.pop(ctx);
                 setState(() => photo = '');
               }),
@@ -101,7 +102,7 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    final titles = [onboarding ? 'Welcome! 👋' : 'Your profile', 'What do you eat?', 'What’s in your kitchen?'];
+    final titles = [onboarding ? 'Welcome' : 'Your profile', 'What do you eat?', 'What’s in your kitchen?'];
     return PopScope(
       canPop: !onboarding || widget.store.d.me.onboarded,
       child: Scaffold(
@@ -168,7 +169,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(color: Pal.goSolid, shape: BoxShape.circle, border: Border.all(color: p.bg, width: 3)),
-                  child: const Center(child: Text('📷', style: TextStyle(fontSize: 17))),
+                  child: const Icon(Icons.photo_camera, color: Colors.white, size: 18),
                 ),
               ),
             ]),
@@ -203,7 +204,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Row(children: [
-                    EmojiBox(d.emoji, size: 50, bg: p.greenSoft, radius: 16),
+                    IconTile(dietPrefIcon(d.id), size: 50, radius: 16, bg: p.greenSoft, fg: p.green),
                     gap16,
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -231,7 +232,7 @@ class _SetupScreenState extends State<SetupScreen> {
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final i in g.items)
               FilterChip(
-                label: Text('${i.emoji} ${i.label}'),
+                label: Text(i.label),
                 selected: have.contains(i.id),
                 showCheckmark: true,
                 checkmarkColor: p.green,

@@ -15,9 +15,10 @@ leaves the phone.
   about 300 over, meant for very active days or building muscle. You can also
   set your own number.
 - **Quick-pick Indian foods.** About 80 common South Indian and Indian items
-  as a shop-style grid: tap ADD, adjust with − / +, then add everything from
-  the green bar at the bottom. Your five most recent foods come first as a
-  short list, and you can add your own.
+  in a list grouped by kind of food: tap ADD, adjust with − / +, then add
+  everything from the green bar at the bottom. Your five most recent foods
+  come first, and you can add your own. Each food's icon is tinted by how
+  calorie-dense it is: green low, amber medium, pink high.
 - **Easy to correct.** Every log and every removal shows *Undo* for a few
   seconds. Tap a logged food on Today to change how much you ate. Swipe
   Today left or right to move between days.
@@ -106,7 +107,7 @@ flutter build web     # a browser copy of the same app, handy for a quick look
 | `lib/store.dart` | App state and every change to it; saves and re-plans reminders |
 | `lib/reminders.dart` | Which reminders to schedule |
 | `lib/services/` | Storage, old-data recovery, notifications, step sensor |
-| `lib/ui/` | Theme, shared widgets and the screens |
+| `lib/ui/` | Theme, shared widgets, icons and the screens. The app uses Material icons only, never emoji (a test checks) |
 | `test/` | Unit tests and screen tests (including a 360 px-wide phone in both themes) |
 
 ### The signing key

@@ -64,6 +64,7 @@ class Pal {
   static const goSolid = Color(0xFF0B9442);
 
   Color soft(Tint t) => switch (t) { Tint.med => medSoft, Tint.green => greenSoft, Tint.high => highSoft, Tint.brand => brandSoft };
+  Color strong(Tint t) => switch (t) { Tint.med => med, Tint.green => green, Tint.high => high, Tint.brand => brand };
   Color levelColor(String l) => l == 'l' ? low : l == 'm' ? med : high;
   Color levelSoft(String l) => l == 'l' ? lowSoft : l == 'm' ? medSoft : highSoft;
   Color statusColor(String level) => level == 'over' ? high : level == 'warn' ? med : green;

@@ -6,6 +6,7 @@ import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../store.dart';
 import '../feedback.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -52,7 +53,7 @@ class _DietScreenState extends State<DietScreen> {
         padding: const EdgeInsets.fromLTRB(4, 14, 4, 12),
         child: Text.rich(TextSpan(style: TextStyle(color: p.muted, fontSize: 14), children: [
           TextSpan(text: target > 0 ? '${fmt(dayTotal)} kcal planned' : 'Set up your goal first', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
-          if (target > 0) TextSpan(text: ' · fits your ${fmt(target)} limit · ${pref.emoji} ${pref.short}'),
+          if (target > 0) TextSpan(text: ' · fits your ${fmt(target)} limit · ${pref.short}'),
           if (target > 0 && burnt > 0) TextSpan(text: ' · +${fmt(burnt)} from moving'),
         ])),
       ),
@@ -61,12 +62,14 @@ class _DietScreenState extends State<DietScreen> {
           AppCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(children: [
-              Text(m.emoji, style: const TextStyle(fontSize: 18)),
+              IconTile(mealIcon(m.id), size: 32, radius: 10, bg: p.soft(m.tint), fg: p.strong(m.tint)),
               gap12,
               Expanded(child: Text(m.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
               gap8,
+              Icon(Icons.check_circle, size: 18, color: p.green),
+              gap4,
               Flexible(
-                child: Text('✓ Logged · ${fmt(sumKcal(c.entriesOn(day).where((e) => e.meal == m.id).toList()))} kcal',
+                child: Text('Logged · ${fmt(sumKcal(c.entriesOn(day).where((e) => e.meal == m.id).toList()))} kcal',
                     textAlign: TextAlign.end, style: TextStyle(color: p.green, fontWeight: FontWeight.w700)),
               ),
             ]),
@@ -75,7 +78,7 @@ class _DietScreenState extends State<DietScreen> {
           AppCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Text(m.emoji, style: const TextStyle(fontSize: 20)),
+                IconTile(mealIcon(m.id), size: 32, radius: 10, bg: p.soft(m.tint), fg: p.strong(m.tint)),
                 gap8,
                 Expanded(
                   child: Text('${m.label.toUpperCase()}${times[m.id] != null ? ' · ${clock12(times[m.id]!)}' : ''}',
@@ -94,7 +97,7 @@ class _DietScreenState extends State<DietScreen> {
                 if (offset == 0) ...[
                   gap8,
                   Expanded(
-                    child: GoButton('✓ I ate this', onPressed: () {
+                    child: GoButton('I ate this', icon: Icons.check, onPressed: () {
                       final k = store.logPlan(m.id);
                       final b = store.lastBatch;
                       if (k != null && b != null) showUndo(context, '${m.label} logged · ${fmt(k)} kcal', () => store.removeBatch(day, b), buzz: true);
@@ -107,7 +110,7 @@ class _DietScreenState extends State<DietScreen> {
         else if (target > 0)
           AppCard(
             child: Row(children: [
-              Text(m.emoji, style: const TextStyle(fontSize: 20)),
+              IconTile(mealIcon(m.id), size: 32, radius: 10, bg: p.soft(m.tint), fg: p.strong(m.tint)),
               gap12,
               Expanded(child: Text('${m.label}: nothing in your kitchen fits.', style: const TextStyle(fontSize: 15))),
               TextButton(onPressed: widget.goMe, child: const Text('Update kitchen')),
@@ -121,7 +124,7 @@ class _DietScreenState extends State<DietScreen> {
           gap12,
           Wrap(spacing: 6, runSpacing: 6, children: [
             for (final id in have)
-              if (pantryInfo[id] != null) Chip(label: Text('${pantryInfo[id]!.emoji} ${pantryInfo[id]!.label}'), visualDensity: VisualDensity.compact),
+              if (pantryInfo[id] != null) Chip(label: Text(pantryInfo[id]!.label), visualDensity: VisualDensity.compact),
           ]),
           Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: widget.goMe, child: const Text('Change in Me'))),
           const _PlateGuide(),
@@ -137,10 +140,10 @@ class _PlateGuide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    Widget row(Color c, String t, String s) => Padding(
+    Widget row(Color c, IconData icon, String t, String s) => Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(margin: const EdgeInsets.only(top: 4), width: 12, height: 12, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(4))),
+            IconTile(icon, size: 28, radius: 8, bg: c.withValues(alpha: .16), fg: c),
             gap8,
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(t, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)), Muted(s, size: 12)])),
           ]),
@@ -155,9 +158,9 @@ class _PlateGuide extends StatelessWidget {
           gap16,
           Expanded(
             child: Column(children: [
-              row(const Color(0xFF22C55E), 'Half: vegetables and fruit', 'Poriyal, kootu, salad, fruit'),
-              row(const Color(0xFFF59E0B), 'Quarter: grains', 'Rice, idli, dosa, chapati'),
-              row(const Color(0xFF8B2CF5), 'Quarter: protein', 'Dal, sambar, curd, eggs, fish'),
+              row(const Color(0xFF22C55E), Icons.eco_outlined, 'Half: vegetables and fruit', 'Poriyal, kootu, salad, fruit'),
+              row(const Color(0xFFF59E0B), Icons.rice_bowl_outlined, 'Quarter: grains', 'Rice, idli, dosa, chapati'),
+              row(const Color(0xFF8B2CF5), Icons.egg_outlined, 'Quarter: protein', 'Dal, sambar, curd, eggs, fish'),
             ]),
           ),
         ]),
@@ -178,14 +181,12 @@ class _PlatePainter extends CustomPainter {
     canvas.drawArc(r, -math.pi / 2, math.pi, true, Paint()..color = const Color(0xFF22C55E));
     canvas.drawArc(r, math.pi / 2, math.pi / 2, true, Paint()..color = const Color(0xFFF59E0B));
     canvas.drawArc(r, math.pi, math.pi / 2, true, Paint()..color = const Color(0xFF8B2CF5));
-    void emoji(String e, Offset at, double s) {
-      final tp = TextPainter(text: TextSpan(text: e, style: TextStyle(fontSize: s)), textDirection: TextDirection.ltr)..layout();
-      tp.paint(canvas, at - Offset(tp.width / 2, tp.height / 2));
-    }
-
-    emoji('🥦', c + Offset(size.width * .22, 0), 20);
-    emoji('🍚', c + Offset(-size.width * .2, size.width * .2), 17);
-    emoji('🫘', c + Offset(-size.width * .2, -size.width * .2), 17);
+    // Thin lines between the sections, like a divided plate.
+    final gap = Paint()
+      ..color = rim
+      ..strokeWidth = 3;
+    canvas.drawLine(c + Offset(0, -r.height / 2), c + Offset(0, r.height / 2), gap);
+    canvas.drawLine(c, c + Offset(-r.width / 2, 0), gap);
   }
 
   @override
