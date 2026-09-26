@@ -1,0 +1,14 @@
+{
+  "appId": "com.yas369.platecheck",
+  "appName": "Plate Check",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#F6F4EF"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_plate",
+      "iconColor": "#2F6B4F"
+    }
+  }
+}

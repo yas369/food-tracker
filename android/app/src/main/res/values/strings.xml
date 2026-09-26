@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Plate Check</string>
+    <string name="title_activity_main">Plate Check</string>
+    <string name="package_name">com.yas369.platecheck</string>
+    <string name="custom_url_scheme">com.yas369.platecheck</string>
+</resources>

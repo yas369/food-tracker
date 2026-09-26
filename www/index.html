@@ -71,13 +71,14 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
   font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
   -webkit-text-size-adjust: 100%;
-  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  padding-bottom: calc(76px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
 }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -85,7 +86,7 @@ button { cursor: pointer; }
 header.top {
   position: sticky; top: 0; z-index: 5;
   background: var(--bg);
-  padding: calc(10px + env(safe-area-inset-top)) 0 8px;
+  padding: calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top))) 0 8px;
   border-bottom: 1px solid var(--line);
 }
 header.top .wrap { display: flex; align-items: center; gap: 8px; }
@@ -151,7 +152,7 @@ section.view.active { display: block; }
 nav.tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
   background: var(--surface); border-top: 1px solid var(--line);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom));
 }
 nav.tabs .wrap { display: flex; }
 nav.tabs button {
@@ -174,7 +175,7 @@ input[type="text"], input[type="number"], input[type="search"], input[type="time
 .switch-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .switch-row:first-of-type { border-top: 0; }
 .switch-row .grow { flex: 1; min-width: 0; }
-.switch-row input[type="time"] { width: 120px; flex: none; }
+.switch-row input[type="time"] { width: 140px; flex: none; }
 input[type="checkbox"].toggle { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
 
 /* Add sheet */
@@ -187,10 +188,10 @@ dialog::backdrop { background: rgba(0,0,0,.4); }
   dialog { max-width: 560px; height: 90vh; margin: 5vh auto; border-radius: 18px; }
 }
 .sheet { display: flex; flex-direction: column; height: 100%; }
-.sheet-head { display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; border-bottom: 1px solid var(--line); }
+.sheet-head { display: flex; align-items: center; gap: 8px; padding: calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top))) 16px 10px; border-bottom: 1px solid var(--line); }
 .sheet-head h2 { flex: 1; margin: 0; font-size: 17px; }
 .sheet-body { flex: 1; overflow-y: auto; padding: 12px 16px 16px; -webkit-overflow-scrolling: touch; }
-.sheet-foot { border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--surface); }
+.sheet-foot { border-top: 1px solid var(--line); padding: 12px 16px calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); background: var(--surface); }
 .hunger { display: grid; gap: 8px; margin: 12px 0; }
 .hunger button { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; min-height: 52px; display: flex; gap: 12px; align-items: center; }
 .hunger button b { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; flex: none; }
@@ -236,7 +237,7 @@ details.custom summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
 .insights { margin: 0; padding-left: 18px; font-size: 14px; }
 .insights li { margin: 6px 0; }
 .toast {
-  position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  position: fixed; left: 50%; bottom: calc(90px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); transform: translateX(-50%);
   background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 14px;
   opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 50; max-width: calc(100% - 32px);
 }
@@ -331,7 +332,21 @@ details.custom summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
       <div id="reminderList"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="nativeReminders" hidden>
+      <h2>Meal reminders</h2>
+      <p class="small" style="margin-top:0"><strong id="nativeState">Checking…</strong></p>
+      <p class="muted small">Reminders are scheduled on your phone for the next 14 days and keep working with the app closed or after a restart. Each time you open the app, they're topped up. Logging a meal cancels that day's reminder for it.</p>
+      <div class="row" style="margin-bottom:8px">
+        <button class="btn" id="nativeNotifBtn">Turn on reminders</button>
+        <button class="btn" id="nativeTest">Send a test</button>
+      </div>
+      <div id="exactRow" hidden>
+        <p class="muted small">Android may delay reminders by several minutes to save battery. To have them arrive on time, allow <em>Alarms &amp; reminders</em> for Plate Check.</p>
+        <button class="btn slim" id="exactBtn">Allow on-time reminders</button>
+      </div>
+    </div>
+
+    <div class="card" id="webReminders">
       <h2>Get the reminders on your phone</h2>
       <p class="small" style="margin-top:0"><strong>Most reliable: add them to your calendar.</strong> Your phone's calendar alerts you even when this app is closed, on iPhone and Android.</p>
       <div class="row" style="margin-bottom:8px">
@@ -365,7 +380,7 @@ details.custom summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
 
     <div class="card">
       <h2>Your data</h2>
-      <p class="muted small" style="margin-top:0">Everything is stored only in this browser on this phone. Nothing is sent anywhere. Clearing browser data or changing phones will erase it, so export a backup now and then.</p>
+      <p class="muted small" style="margin-top:0">Everything is stored only on this phone. Nothing is sent anywhere. Uninstalling, clearing the app's data or changing phones erases it, so export a backup now and then.</p>
       <div class="row">
         <button class="btn" id="exportBtn">Export backup</button>
         <button class="btn" id="importBtn">Import backup</button>
@@ -402,6 +417,7 @@ details.custom summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="capacitor.js"></script>
 <script>
 'use strict';
 
@@ -570,12 +586,12 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Could not save: storage is full or blocked'); }
-  mirrorForWorker();
+  if (NATIVE) scheduleNativeSoon(); else mirrorForWorker();
 }
 /* The service worker can't read localStorage, so a small summary is copied
    into the Cache API for background reminder checks. */
 function mirrorForWorker() {
-  if (!('caches' in window)) return;
+  if (NATIVE || !('caches' in window)) return;
   const days = {};
   for (let i = 0; i < 2; i++) {
     const k = dayKeyOffset(todayKey(), -i);
@@ -586,7 +602,7 @@ function mirrorForWorker() {
   caches.open('plate-check-state').then(c => c.put('state.json', new Response(JSON.stringify(summary), { headers: { 'Content-Type': 'application/json' } }))).catch(() => {});
 }
 async function mergeWorkerFired() {
-  if (!('caches' in window)) return;
+  if (NATIVE || !('caches' in window)) return;
   try {
     const c = await caches.open('plate-check-state');
     const r = await c.match('sw-fired.json');
@@ -781,8 +797,11 @@ function renderPause() {
   $('#wait10').onclick = () => {
     closeAdd();
     const when = Date.now() + 10 * 60 * 1000;
-    try { localStorage.setItem('plate-check.wait', String(when)); } catch (e) {}
-    setTimeout(waitDone, 10 * 60 * 1000);
+    if (NATIVE) nativeNotifyNow('10 minutes are up', 'Still hungry? Then eat, and log it. If the craving has passed, you just skipped a snack.', ID_WAIT, new Date(when));
+    else {
+      try { localStorage.setItem('plate-check.wait', String(when)); } catch (e) {}
+      setTimeout(waitDone, 10 * 60 * 1000);
+    }
     toast('Good call. I’ll check back in 10 minutes.');
   };
   $('#eatAnyway').onclick = () => renderPicker();
@@ -992,7 +1011,7 @@ function renderSettings() {
   $('#hungerToggle').checked = !!state.settings.hungerCheck;
   $('#themeSel').value = state.settings.theme || '';
   renderReminders();
-  renderNotifState();
+  if (NATIVE) renderNativeState(); else renderNotifState();
 }
 function readProfile() {
   return { age: Number($('#pAge').value), sex: $('#pSex').value, height: Number($('#pHeight').value), weight: Number($('#pWeight').value),
@@ -1068,8 +1087,8 @@ function download(name, text, type) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 $('#hungerToggle').onchange = e => { state.settings.hungerCheck = e.target.checked; save(); };
-$('#themeSel').onchange = e => { state.settings.theme = e.target.value; save(); applyTheme(); };
-$('#exportBtn').onclick = () => download('plate-check-backup-' + todayKey() + '.json', JSON.stringify(state, null, 1), 'application/json');
+$('#themeSel').onchange = e => { state.settings.theme = e.target.value; save(); applyTheme(); syncSystemBars(); };
+$('#exportBtn').onclick = () => NATIVE ? nativeExport() : download('plate-check-backup-' + todayKey() + '.json', JSON.stringify(state, null, 1), 'application/json');
 $('#importBtn').onclick = () => $('#importFile').click();
 $('#importFile').onchange = async e => {
   const file = e.target.files[0];
@@ -1107,6 +1126,7 @@ $('#notifBtn').onclick = async () => {
 };
 $('#testNotif').onclick = () => notify('Plate Check is working', 'This is what a meal reminder looks like.', 'test');
 async function notify(title, body, tag) {
+  if (NATIVE) return nativeNotifyNow(title, body, tag === 'wait' ? ID_WAIT : ID_TEST);
   if (!('Notification' in window) || Notification.permission !== 'granted') { if (document.visibilityState === 'visible') toast(title + ': ' + body); return; }
   const opts = { body, tag: 'plate-check-' + tag, icon: 'icon-192.png', badge: 'icon-192.png', data: { url: location.pathname + '?add=1' } };
   try {
@@ -1135,7 +1155,8 @@ function checkReminders() {
   const now = new Date(), k = todayKey(), mins = now.getHours() * 60 + now.getMinutes();
   const logged = new Set((state.log[k] || []).map(e => e.meal));
   let changed = false;
-  for (const r of state.settings.reminders) {
+  // The Android app schedules real notifications instead (see scheduleNative).
+  if (!NATIVE) for (const r of state.settings.reminders) {
     if (!r.on) continue;
     const due = minutesOf(r.time);
     const fk = k + ':' + r.id;
@@ -1150,6 +1171,145 @@ function checkReminders() {
   if (changed) save();
   const w = Number(localStorage.getItem('plate-check.wait') || 0);
   if (w && Date.now() >= w) waitDone();
+}
+
+/* ---------- Android app (Capacitor) ----------
+   In the installed app, reminders are real scheduled notifications: one per
+   meal per day for the next 14 days, rebuilt after every change. That lets a
+   logged meal cancel its own reminder, and today's text carry today's numbers. */
+const Cap = window.Capacitor;
+const NATIVE = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
+const LN = NATIVE ? Cap.registerPlugin('LocalNotifications') : null;
+const AppPlugin = NATIVE ? Cap.registerPlugin('App') : null;
+const FS = NATIVE ? Cap.registerPlugin('Filesystem') : null;
+const SharePlugin = NATIVE ? Cap.registerPlugin('Share') : null;
+const SystemBars = NATIVE ? Cap.registerPlugin('SystemBars') : null;
+const DAYS_AHEAD = 14;
+const ID_TEST = 1, ID_WAIT = 2, ID_STALE = 3;
+let nativePerm = 'prompt', nativeExact = true, nativeCount = 0;
+
+function reminderId(dayKey, idx) { return Number(dayKey.replace(/-/g, '')) * 10 + idx; }
+async function nativeInit() {
+  try {
+    await LN.createChannel({ id: 'meals', name: 'Meal reminders', description: 'Meal-time and kitchen-closed reminders', importance: 4, visibility: 1 });
+  } catch (e) {}
+  LN.addListener('localNotificationActionPerformed', ev => {
+    const n = ev && ev.notification;
+    if (n && n.extra && n.extra.add && state.profile) {
+      viewDay = todayKey(); showView('today'); openAdd(n.extra.meal || undefined);
+    }
+  });
+  AppPlugin.addListener('backButton', () => {
+    if ($('#addDialog').open) closeAdd();
+    else if (currentView !== 'today') showView('today');
+    else if (viewDay !== todayKey()) { viewDay = todayKey(); renderToday(); }
+    else AppPlugin.exitApp();
+  });
+  AppPlugin.addListener('appStateChange', s => { if (s.isActive) scheduleNative(); });
+  await refreshNativePerm();
+  await scheduleNative();
+}
+async function refreshNativePerm() {
+  try { nativePerm = (await LN.checkPermissions()).display; } catch (e) { nativePerm = 'denied'; }
+  try { nativeExact = (await LN.checkExactNotificationSetting()).exact_notification === 'granted'; } catch (e) { nativeExact = true; }
+}
+let scheduleTimer;
+function scheduleNativeSoon() { clearTimeout(scheduleTimer); scheduleTimer = setTimeout(scheduleNative, 800); }
+async function scheduleNative() {
+  if (!NATIVE) return;
+  await refreshNativePerm();
+  if (nativePerm !== 'granted' || !dailyTarget()) { nativeCount = 0; renderNativeState(); return; }
+  try {
+    const pending = await LN.getPending();
+    const old = (pending.notifications || []).filter(n => n.id !== ID_WAIT && n.id !== ID_TEST);
+    if (old.length) await LN.cancel({ notifications: old.map(n => ({ id: n.id })) });
+  } catch (e) {}
+  const now = Date.now(), t = todayKey();
+  const list = [];
+  for (let d = 0; d < DAYS_AHEAD; d++) {
+    const k = dayKeyOffset(t, d);
+    const logged = new Set((state.log[k] || []).map(e => e.meal));
+    const dayNum = Math.floor(parseKey(k).getTime() / 864e5);
+    const tip = TIPS[((dayNum % TIPS.length) + TIPS.length) % TIPS.length];
+    state.settings.reminders.forEach((r, idx) => {
+      if (!r.on) return;
+      const [h, m] = r.time.split(':').map(Number);
+      const at = parseKey(k); at.setHours(h, m, 0, 0);
+      if (at.getTime() <= now + 30000) return;
+      if (r.meal && logged.has(r.meal)) return;
+      list.push({
+        id: reminderId(k, idx),
+        title: r.meal ? r.label + ' time' : 'Kitchen closed?',
+        body: d === 0 ? reminderMessage(r) : (r.meal ? 'Check how hungry you are, then eat slowly. ' + tip : 'Close the kitchen for today. Open Plate Check to see what’s left.'),
+        largeBody: d === 0 ? reminderMessage(r) + '\n\n' + tip : undefined,
+        schedule: { at, allowWhileIdle: true },
+        isExactNotification: nativeExact,
+        channelId: 'meals',
+        extra: { add: !!r.meal, meal: r.meal },
+      });
+    });
+  }
+  // Reminders run out if the app is never opened; say so on the last day.
+  const stale = parseKey(dayKeyOffset(t, DAYS_AHEAD - 1)); stale.setHours(10, 0, 0, 0);
+  list.push({ id: ID_STALE, title: 'Plate Check misses you', body: 'You haven’t opened the app in two weeks, so reminders stop after today. Open it to keep them going.', schedule: { at: stale, allowWhileIdle: true }, isExactNotification: false, channelId: 'meals', extra: { add: false } });
+  try { await LN.schedule({ notifications: list }); nativeCount = list.length - 1; }
+  catch (e) { nativeCount = 0; toast('Couldn’t schedule reminders'); }
+  renderNativeState();
+}
+function renderNativeState() {
+  if (!NATIVE) return;
+  const s = $('#nativeState'), b = $('#nativeNotifBtn');
+  if (nativePerm === 'granted') {
+    s.textContent = nativeCount ? 'On: ' + nativeCount + ' reminders scheduled' : (dailyTarget() ? 'On. No reminders are switched on above.' : 'On. Set your daily limit to start them.');
+    b.hidden = true;
+  } else if (nativePerm === 'denied') {
+    s.textContent = 'Off: notifications are blocked for Plate Check';
+    b.hidden = false; b.textContent = 'Open app settings';
+  } else {
+    s.textContent = 'Off';
+    b.hidden = false; b.textContent = 'Turn on reminders';
+  }
+  $('#nativeTest').disabled = nativePerm !== 'granted';
+  $('#exactRow').hidden = nativePerm !== 'granted' || nativeExact;
+}
+async function nativeNotifyNow(title, body, id, at) {
+  const n = { id, title, body, channelId: 'meals', extra: { add: id === ID_WAIT } };
+  if (at) { n.schedule = { at, allowWhileIdle: true }; n.isExactNotification = nativeExact; }
+  try { await LN.schedule({ notifications: [n] }); } catch (e) { toast(title + ': ' + body); }
+}
+async function nativeExport() {
+  const name = 'plate-check-backup-' + todayKey() + '.json';
+  try {
+    const res = await FS.writeFile({ path: name, data: JSON.stringify(state, null, 1), directory: 'CACHE', encoding: 'utf8' });
+    await SharePlugin.share({ title: 'Plate Check backup', text: 'Plate Check backup ' + todayKey(), files: [res.uri], dialogTitle: 'Save your backup' });
+  } catch (e) {
+    if (!/cancel/i.test(String(e && e.message))) toast('Couldn’t export the backup');
+  }
+}
+function syncSystemBars() {
+  if (!SystemBars) return;
+  const t = state.settings.theme;
+  const dark = t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  SystemBars.setStyle({ style: dark ? 'DARK' : 'LIGHT' }).catch(() => {});
+}
+if (NATIVE) {
+  $('#nativeReminders').hidden = false;
+  $('#webReminders').hidden = true;
+  $('#nativeNotifBtn').onclick = async () => {
+    if (nativePerm === 'denied') {
+      toast('Settings → Apps → Plate Check → Notifications');
+      return;
+    }
+    try { nativePerm = (await LN.requestPermissions()).display; } catch (e) {}
+    await scheduleNative();
+    if (nativePerm === 'granted') toast('Reminders on');
+  };
+  $('#nativeTest').onclick = () => nativeNotifyNow('Plate Check is working', 'This is what a meal reminder looks like.', ID_TEST);
+  $('#exactBtn').onclick = async () => {
+    try { await LN.changeExactNotificationSetting(); } catch (e) {}
+    await scheduleNative();
+  };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncSystemBars);
 }
 
 /* ---------- Views ---------- */
@@ -1171,7 +1331,10 @@ function renderAll() { showView(currentView); }
 /* ---------- Boot ---------- */
 applyTheme();
 (async () => {
-  if ('serviceWorker' in navigator) {
+  // The app ships its files inside the APK; a service worker would only risk
+  // serving stale copies after an update.
+  if (NATIVE) { syncSystemBars(); nativeInit(); }
+  else if ('serviceWorker' in navigator) {
     try { swReg = await navigator.serviceWorker.register('sw.js'); } catch (e) {}
   }
   await mergeWorkerFired();
@@ -1189,7 +1352,7 @@ applyTheme();
       checkReminders(); if (currentView === 'today') renderToday();
     }
   });
-  if ('Notification' in window && Notification.permission === 'granted') registerPeriodic();
+  if (!NATIVE && 'Notification' in window && Notification.permission === 'granted') registerPeriodic();
 })();
 </script>
 </body>
