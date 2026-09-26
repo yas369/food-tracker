@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../store.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'goal.dart';
@@ -34,7 +35,7 @@ class MeScreen extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(me.name.isEmpty ? 'Add your name' : me.name, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
-              Muted('${store.d.log.length} days logged · 🔥 ${c.streak(store.today)} day streak'),
+              Muted('${store.d.log.length} days logged · ${c.streak(store.today)}-day streak'),
             ]),
           ),
           TextButton(onPressed: () => openSetup(context, store, SetupMode.profile), child: const Text('Edit')),
@@ -42,31 +43,31 @@ class MeScreen extends StatelessWidget {
       ),
       Group(title: 'Your goal', children: [
         NavRow(
-          emoji: '🎯',
+          icon: Icons.flag_outlined,
           title: 'Plan and body',
           value: prof == null ? 'Not set yet' : '${prof.override != null ? 'Own limit' : planInfo(prof.plan).name} · ${fmt(c.baseTarget)} kcal a day',
           onTap: () => openGoal(context, store),
         ),
       ]),
       Group(title: 'Food', children: [
-        NavRow(emoji: '🥗', title: 'I eat', value: dietPrefInfo(store.d.settings.dietPref).title, onTap: () => openSetup(context, store, SetupMode.pref)),
-        NavRow(emoji: '🧺', title: 'My kitchen', value: '${c.pantry.length} items at home', onTap: () => openSetup(context, store, SetupMode.kitchen)),
+        NavRow(icon: Icons.restaurant_outlined, title: 'I eat', value: dietPrefInfo(store.d.settings.dietPref).title, onTap: () => openSetup(context, store, SetupMode.pref)),
+        NavRow(icon: Icons.kitchen_outlined, title: 'My kitchen', value: '${c.pantry.length} items at home', onTap: () => openSetup(context, store, SetupMode.kitchen)),
       ]),
       Group(title: 'Reminders and habits', children: [
         NavRow(
-          emoji: '⏰',
+          icon: Icons.notifications_none,
           title: 'Meal reminders',
           value: kIsWeb ? '$rsOn on' : !store.notifAllowed ? 'Off: tap to turn on' : '$rsOn on',
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RemindersScreen(store: store))),
         ),
         NavRow(
-          emoji: '🤔',
+          icon: Icons.psychology_outlined,
           title: 'Ask how hungry I am',
           value: 'Before snacks and off-time meals',
           trailing: Switch(value: store.d.settings.hungerCheck, onChanged: store.setHungerCheck),
         ),
         NavRow(
-          emoji: '🎨',
+          icon: Icons.contrast,
           title: 'Theme',
           value: themes[store.d.settings.theme],
           onTap: () async {
@@ -81,11 +82,11 @@ class MeScreen extends StatelessWidget {
         ),
       ]),
       Group(title: 'Your data', children: [
-        NavRow(emoji: '📤', title: 'Export backup', value: 'Save a copy of everything', onTap: () async {
+        NavRow(icon: Icons.file_upload_outlined, title: 'Export backup', value: 'Save a copy of everything', onTap: () async {
           final f = await store.storage.writeBackup(store.d, 'plate-check-backup-${store.today}.json');
           await SharePlus.instance.share(ShareParams(files: [XFile(f.path, mimeType: 'application/json')], title: 'Plate Check backup'));
         }),
-        NavRow(emoji: '📥', title: 'Import backup', onTap: () async {
+        NavRow(icon: Icons.file_download_outlined, title: 'Import backup', onTap: () async {
           final files = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
           if (files.isEmpty || !context.mounted) return;
           final raw = await files.first.xFile.readAsString();
@@ -93,7 +94,7 @@ class MeScreen extends StatelessWidget {
           final done = store.importBackup(raw);
           if (context.mounted) toast(context, done ? 'Backup restored' : 'That file isn’t a Plate Check backup');
         }),
-        NavRow(emoji: '🗑️', title: 'Erase everything', danger: true, onTap: () async {
+        NavRow(icon: Icons.delete_outline, title: 'Erase everything', danger: true, onTap: () async {
           if (await _confirm(context, 'Erase all your logs, foods and settings from this phone? This can’t be undone.')) store.eraseAll();
         }),
       ]),
@@ -135,7 +136,6 @@ class RemindersScreen extends StatelessWidget {
 class RemindersCard extends StatelessWidget {
   const RemindersCard({super.key, required this.store});
   final AppStore store;
-  static const emoji = {'breakfast': '🌅', 'lunch': '☀️', 'snack': '🍪', 'dinner': '🌙', 'checkin': '🔒'};
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
@@ -147,7 +147,7 @@ class RemindersCard extends StatelessWidget {
         for (var i = 0; i < rs.length; i++)
           SettingRow(
             first: i == 0,
-            emoji: emoji[rs[i].id] ?? '⏰',
+            icon: mealIcon(rs[i].id),
             title: rs[i].label,
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               TextButton(
@@ -166,11 +166,17 @@ class RemindersCard extends StatelessWidget {
         if (kIsWeb)
           const Muted('Reminders work in the Android app.')
         else ...[
-          Text(
-              store.notifAllowed
-                  ? (store.reminderCount > 0 ? '🔔 On: ${store.reminderCount} reminders scheduled for the next 14 days' : '🔔 On. Switch a reminder on above.')
-                  : '🔕 Off: notifications aren’t allowed yet',
-              style: const TextStyle(fontWeight: FontWeight.w700)),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(store.notifAllowed ? Icons.notifications_active_outlined : Icons.notifications_off_outlined, size: 20, color: store.notifAllowed ? p.green : p.high),
+            gap8,
+            Expanded(
+              child: Text(
+                  store.notifAllowed
+                      ? (store.reminderCount > 0 ? 'On: ${store.reminderCount} reminders scheduled for the next 14 days' : 'On. Switch a reminder on above.')
+                      : 'Off: notifications aren’t allowed yet',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ]),
           gap8,
           Wrap(spacing: 8, runSpacing: 8, children: [
             if (!store.notifAllowed) GoButton('Turn on reminders', expand: false, onPressed: store.requestNotifications),

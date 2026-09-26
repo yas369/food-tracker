@@ -5,6 +5,7 @@ import '../../logic.dart';
 import '../../models.dart';
 import '../../store.dart';
 import '../feedback.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -79,8 +80,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             style: const TextStyle(color: Color(0xFF1D0F33), fontSize: 16),
             decoration: InputDecoration(
               hintText: 'Search idli, rice, tea…',
-              prefixIcon: const Padding(padding: EdgeInsets.only(left: 12, right: 8), child: Text('🔍', style: TextStyle(fontSize: 17))),
-              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+              prefixIcon: Icon(Icons.search, color: p.muted),
               fillColor: Colors.white,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -101,8 +101,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                       customBorder: const StadiumBorder(),
                       onTap: () => setState(() => meal = m.id),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        child: Text('${m.emoji} ${m.label}', style: TextStyle(fontWeight: FontWeight.w700, color: m.id == meal ? p.brandDeep : Colors.white)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(mealIcon(m.id), size: 16, color: m.id == meal ? p.brandDeep : Colors.white),
+                          const SizedBox(width: 6),
+                          Text(m.label, style: TextStyle(fontWeight: FontWeight.w700, color: m.id == meal ? p.brandDeep : Colors.white)),
+                        ]),
                       ),
                     ),
                   ),
@@ -132,7 +136,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(children: [
-                    EmojiBox(h.emoji, size: 48, bg: p.soft(h.tint)),
+                    IconTile(hungerIcon(h.v), size: 48, bg: p.soft(h.tint), fg: p.strong(h.tint)),
                     gap12,
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -149,13 +153,13 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       ]);
 
   Widget _pauseBody(Pal p) => ListView(padding: const EdgeInsets.fromLTRB(24, 32, 24, 24), children: [
-        const Center(child: Text('⏳', style: TextStyle(fontSize: 72))),
-        gap12,
+        const Center(child: IconTile(Icons.hourglass_empty, size: 88, radius: 28)),
+        gap16,
         Text(hunger == 1 ? 'You’re not really hungry' : 'You’re only a little hungry', textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         gap8,
         const Muted('Boredom, stress, tiredness and food just being there all feel like hunger. Drink a glass of water, wait 10 minutes, then decide.', size: 15, align: TextAlign.center),
         const SizedBox(height: 20),
-        GoButton('💧 Wait 10 minutes', onPressed: () async {
+        GoButton('Wait 10 minutes', icon: Icons.water_drop_outlined, onPressed: () async {
           final nav = Navigator.of(context);
           final messenger = ScaffoldMessenger.of(context);
           await store.waitTenMinutes();
@@ -166,7 +170,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         SoftButton('Log it anyway', onPressed: () => setState(() => step = _Step.pick)),
       ]);
 
-  // ---------- Food grid ----------
+  // ---------- Food list ----------
 
   Widget _pickBody(Pal p) {
     final all = c.allFoods;
@@ -190,20 +194,16 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               lv = '';
             })),
         Pill('Low-cal only', selected: lv == 'l', color: p.low, dot: p.low, onTap: () => setState(() => lv = lv == 'l' ? '' : 'l')),
-        for (final ct in cats) Pill('${catEmoji[ct] ?? '🍽️'} $ct', selected: cat == ct, onTap: () => setState(() => cat = ct)),
+        for (final ct in cats) Pill(ct, selected: cat == ct, onTap: () => setState(() => cat = ct)),
       ]),
       if (q.isEmpty && cat.isEmpty && lv.isEmpty && recent.isNotEmpty) ...[
-        const _CatTitle('🕘 Recent'),
-        Group(children: [for (final f in recent.take(5)) _recentRow(p, f)]),
+        const _CatTitle(Icons.history, 'Recent'),
+        Group(children: [for (final f in recent.take(5)) _foodRow(p, f)]),
       ],
-      if (byCat.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Muted('🤷 No match. Add it as a custom food below.', align: TextAlign.center)),
+      if (byCat.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Muted('No match. Add it as a custom food below.', align: TextAlign.center)),
       for (final e in byCat.entries) ...[
-        _CatTitle('${catEmoji[e.key] ?? '🍽️'} ${e.key}'),
-        LayoutBuilder(builder: (context, box) {
-          final cols = box.maxWidth >= 400 ? 3 : 2;
-          final w = (box.maxWidth - (cols - 1) * 10) / cols;
-          return Wrap(spacing: 10, runSpacing: 10, children: [for (final f in e.value) SizedBox(width: w, child: _foodCard(p, f))]);
-        }),
+        _CatTitle(categoryIcon(e.key), e.key),
+        Group(children: [for (final f in e.value) _foodRow(p, f)]),
       ],
       gap16,
       _CustomFood(onSave: (f) {
@@ -229,22 +229,32 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         }
       });
 
-  /// Recent foods as compact rows: most meals repeat, so these come first.
-  Widget _recentRow(Pal p, Food f) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        child: Row(children: [
-          EmojiBox(emojiFor(f.id, f.cat), size: 40, bg: p.levelSoft(levelOf(f.kcal))),
-          gap12,
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              Muted('${f.unit} · ${f.kcal} kcal', size: 12),
+  /// One food per row: the icon shows what kind of food it is, its colour how
+  /// calorie-dense (green low, amber medium, pink high).
+  Widget _foodRow(Pal p, Food f) {
+    final lvl = levelOf(f.kcal);
+    return Container(
+      color: (tray[f.id] ?? 0) > 0 ? p.greenSoft : null,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: Row(children: [
+        IconTile(foodIcon(f), size: 40, radius: 12, bg: p.levelSoft(lvl), fg: p.levelColor(lvl)),
+        gap12,
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+            const SizedBox(height: 2),
+            Row(children: [
+              Flexible(child: Muted('${f.unit} · ${f.kcal} kcal', size: 12)),
+              gap8,
+              LevelBadge(lvl),
             ]),
-          ),
-          gap8,
-          _qtyControl(p, f),
-        ]),
-      );
+          ]),
+        ),
+        gap8,
+        _qtyControl(p, f),
+      ]),
+    );
+  }
 
   Widget _qtyControl(Pal p, Food f) {
     final qty = tray[f.id] ?? 0;
@@ -266,51 +276,17 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     return Container(
       decoration: BoxDecoration(color: Pal.goSolid, borderRadius: BorderRadius.circular(10)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _qtyBtn('−', 'Less ${f.name}', () => _set(f.id, qty - s)),
+        _qtyBtn(Icons.remove, 'Less ${f.name}', () => _set(f.id, qty - s)),
         Text(fmtQty(qty), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-        _qtyBtn('+', 'More ${f.name}', () => _set(f.id, qty + s)),
+        _qtyBtn(Icons.add, 'More ${f.name}', () => _set(f.id, qty + s)),
       ]),
     );
   }
 
-  Widget _foodCard(Pal p, Food f) {
-    final qty = tray[f.id] ?? 0;
-    final lvl = levelOf(f.kcal);
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: p.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: qty > 0 ? p.green : p.line, width: 1.5),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          height: 76,
-          decoration: BoxDecoration(color: p.levelSoft(lvl), borderRadius: BorderRadius.circular(14)),
-          child: Stack(children: [
-            Center(child: Text(emojiFor(f.id, f.cat), style: const TextStyle(fontSize: 38))),
-            Positioned(left: 6, top: 6, child: LevelBadge(lvl)),
-          ]),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(height: 36, child: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, height: 1.25))),
-        Muted(f.unit, size: 12),
-        gap8,
-        Row(children: [
-          Expanded(child: Text.rich(TextSpan(children: [
-            TextSpan(text: '${f.kcal}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-            TextSpan(text: ' kcal', style: TextStyle(fontSize: 11, color: p.muted)),
-          ]))),
-          _qtyControl(p, f),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _qtyBtn(String t, String label, VoidCallback onTap) => Semantics(
+  Widget _qtyBtn(IconData icon, String label, VoidCallback onTap) => Semantics(
         button: true,
         label: label,
-        child: InkWell(onTap: onTap, child: SizedBox(width: 28, height: 32, child: Center(child: Text(t, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800))))),
+        child: InkWell(onTap: onTap, child: SizedBox(width: 30, height: 32, child: Icon(icon, color: Colors.white, size: 18))),
       );
 
   // ---------- Cart ----------
@@ -329,16 +305,16 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       final qty = tray[lastFood.id] ?? 0;
       final sw = swaps[lastFood.id] == null ? null : c.food(swaps[lastFood.id]!);
       if (sw != null && sw.kcal <= lastFood.kcal * 0.8) {
-        swap = _swapBox(p, emojiFor(sw.id, sw.cat), 'Lighter swap: ${sw.name} · ${sw.kcal} kcal', 'saves ${fmt((lastFood.kcal - sw.kcal) * qty)} kcal against ${lastFood.name}', 'Swap', () {
+        swap = _swapBox(p, foodIcon(sw), 'Lighter swap: ${sw.name} · ${sw.kcal} kcal', 'saves ${fmt((lastFood.kcal - sw.kcal) * qty)} kcal against ${lastFood.name}', 'Swap', () {
           setState(() {
             tray.remove(lastFood.id);
             tray[sw.id] = (tray[sw.id] ?? 0) + qty;
             last = null;
           });
-          toast(context, 'Swapped for ${sw.name} 🌿');
+          toast(context, 'Swapped for ${sw.name}');
         });
       } else if (qty >= 1) {
-        swap = _swapBox(p, '✂️', 'High-calorie pick.', 'Half a portion saves ${fmt(lastFood.kcal * qty / 2)} kcal.', 'Make it ½', () {
+        swap = _swapBox(p, Icons.content_cut, 'High-calorie pick.', 'Half a portion saves ${fmt(lastFood.kcal * qty / 2)} kcal.', 'Make it ½', () {
           setState(() {
             tray[lastFood.id] = qty / 2;
             last = null;
@@ -401,12 +377,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     );
   }
 
-  Widget _swapBox(Pal p, String emoji, String title, String note, String action, VoidCallback onTap) => Container(
+  Widget _swapBox(Pal p, IconData icon, String title, String note, String action, VoidCallback onTap) => Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(color: p.brandSoft, borderRadius: BorderRadius.circular(16)),
         child: Row(children: [
-          Text(emoji, style: const TextStyle(fontSize: 24)),
+          IconTile(icon, size: 36, radius: 11, bg: p.surface),
           gap8,
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -432,7 +408,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         ? 'Over today’s limit. Close the kitchen for today.'
         : target > 0 && total >= target * .8
             ? '${fmt(target - total)} kcal left. Keep the next meal light.'
-            : 'Logged ✅';
+            : 'Logged';
     final home = Navigator.of(context).context;
     Navigator.pop(context);
     showUndo(home, msg, () => store.removeBatch(widget.day, b), buzz: true);
@@ -440,11 +416,18 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 }
 
 class _CatTitle extends StatelessWidget {
-  const _CatTitle(this.t);
+  const _CatTitle(this.icon, this.t);
+  final IconData icon;
   final String t;
   @override
-  Widget build(BuildContext context) =>
-      Padding(padding: const EdgeInsets.only(top: 16, bottom: 10), child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)));
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 16, bottom: 10),
+        child: Row(children: [
+          Icon(icon, size: 18, color: Pal.of(context).brand),
+          gap8,
+          Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        ]),
+      );
 }
 
 class _CustomFood extends StatefulWidget {
@@ -476,7 +459,8 @@ class _CustomFoodState extends State<_CustomFood> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          title: Text('＋ Add a food that isn’t listed', style: TextStyle(fontWeight: FontWeight.w800, color: p.brand)),
+          leading: Icon(Icons.add_circle_outline, color: p.brand),
+          title: Text('Add a food that isn’t listed', style: TextStyle(fontWeight: FontWeight.w800, color: p.brand)),
           childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
           children: [
             TextField(controller: name, maxLength: 40, decoration: const InputDecoration(labelText: 'Name', counterText: '')),

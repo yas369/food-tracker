@@ -5,6 +5,7 @@ import '../../data/foods.dart';
 import '../../logic.dart';
 import '../../models.dart';
 import '../../store.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -43,11 +44,11 @@ class ProgressScreen extends StatelessWidget {
     }
 
     final insights = _insights(c, days, weekEntries, byMeal, weekKcal, week.length, mix);
-    Widget insight((String, String) x) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+    Widget insight((IconData, String) x) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(x.$1, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 10),
+            IconTile(x.$1, size: 32, radius: 10),
+            const SizedBox(width: 12),
             Expanded(child: Text(x.$2, style: const TextStyle(fontSize: 14, height: 1.4))),
           ]),
         );
@@ -55,8 +56,12 @@ class ProgressScreen extends StatelessWidget {
     final tip = AppCard(
       color: p.greenSoft,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Tip of the day', style: TextStyle(fontWeight: FontWeight.w700)),
-        gap4,
+        Row(children: [
+          Icon(Icons.lightbulb_outline, size: 18, color: p.green),
+          gap8,
+          const Text('Tip of the day', style: TextStyle(fontWeight: FontWeight.w700)),
+        ]),
+        gap8,
         Text(tips[dayNum(today) % tips.length], style: const TextStyle(fontSize: 14, height: 1.45)),
       ]),
     );
@@ -67,8 +72,8 @@ class ProgressScreen extends StatelessWidget {
       return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 120), children: [
         AppCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('🌱', style: TextStyle(fontSize: 36)),
-            gap8,
+            IconTile(Icons.spa_outlined, size: 48, bg: p.greenSoft, fg: p.green),
+            gap12,
             const Text('Your patterns show up here after 3 days of logging', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, height: 1.3)),
             gap8,
             Muted('$logged of 3 days so far. Log every day, even the days you overeat: those are the ones that show what to change.', size: 14),
@@ -92,9 +97,9 @@ class ProgressScreen extends StatelessWidget {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.25)),
           gap12,
           Row(children: [
-            _mini(p, '🔥 $streak', 'day streak'),
-            _mini(p, week.isEmpty ? '–' : fmt(avg), 'avg kcal'),
-            _mini(p, '${week.length}/7', 'days logged'),
+            _mini(p, Icons.local_fire_department_outlined, '$streak', 'day streak'),
+            _mini(p, Icons.restaurant_outlined, week.isEmpty ? '–' : fmt(avg), 'avg kcal'),
+            _mini(p, Icons.event_available_outlined, '${week.length}/7', 'days logged'),
           ]),
         ]),
       ),
@@ -151,7 +156,9 @@ class ProgressScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Column(children: [
                   Row(children: [
-                    Expanded(child: Text('${m.emoji} ${m.label}')),
+                    Icon(mealIcon(m.id), size: 18, color: p.strong(m.tint)),
+                    gap8,
+                    Expanded(child: Text(m.label)),
                     Text('${((byMeal[m.id] ?? 0) / weekKcal * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w700)),
                   ]),
                   const SizedBox(height: 4),
@@ -169,17 +176,21 @@ class ProgressScreen extends StatelessWidget {
     ]);
   }
 
-  Widget _mini(Pal p, String v, String label) => Expanded(
+  Widget _mini(Pal p, IconData icon, String v, String label) => Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(v, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          Row(children: [
+            Icon(icon, size: 18, color: p.brand),
+            const SizedBox(width: 4),
+            Flexible(child: Text(v, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+          ]),
           Text(label, style: TextStyle(fontSize: 12, color: p.muted)),
         ]),
       );
 
-  List<(String, String)> _insights(Calc c, List<String> days, List<Entry> weekEntries, Map<String, double> byMeal, double weekKcal, int logged, Map<String, double> mix) {
-    final ins = <(String, String)>[];
-    if (weekEntries.isEmpty) return [('🌱', 'Log for a few days and patterns will show up here.')];
-    if (logged < 5) ins.add(('📅', 'You logged on $logged of the last 7 days. Missing days are usually the days you overate. Logging those matters most.'));
+  List<(IconData, String)> _insights(Calc c, List<String> days, List<Entry> weekEntries, Map<String, double> byMeal, double weekKcal, int logged, Map<String, double> mix) {
+    final ins = <(IconData, String)>[];
+    if (weekEntries.isEmpty) return [(Icons.spa_outlined, 'Log for a few days and patterns will show up here.')];
+    if (logged < 5) ins.add((Icons.event_busy_outlined, 'You logged on $logged of the last 7 days. Missing days are usually the days you overate. Logging those matters most.'));
     final top = byMeal.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     if (top.isNotEmpty) {
       final share = (top.first.value / weekKcal * 100).round();
@@ -189,25 +200,25 @@ class ProgressScreen extends StatelessWidget {
           : top.first.key == 'snack' && share > 25
               ? 'Snacks are adding up. That’s usually the easiest place to cut.'
               : 'Keeping this meal steady will keep the whole day steady.';
-      ins.add(('🍽️', 'Your biggest meal is $label, at $share% of your calories. $tail'));
+      ins.add((Icons.restaurant_outlined, 'Your biggest meal is $label, at $share% of your calories. $tail'));
     }
-    if (weekKcal > 0 && mix['h']! / weekKcal > .5) ins.add(('🔴', 'More than half your calories came from high-calorie foods. Swapping one of them a day for a green one makes a real difference.'));
+    if (weekKcal > 0 && mix['h']! / weekKcal > .5) ins.add((Icons.warning_amber_outlined, 'More than half your calories came from high-calorie foods. Swapping one of them a day for a green one makes a real difference.'));
     final batches = <String, int>{for (final e in weekEntries) if (e.hunger != null) e.b: e.hunger!};
     if (batches.length >= 3) {
       final low = batches.values.where((h) => h <= 2).length;
       final pct = (low / batches.length * 100).round();
       ins.add(pct >= 30
-          ? ('🧭', 'You weren’t really hungry for $low of ${batches.length} meals and snacks ($pct%). That’s the overeating to work on, more than portion size.')
-          : ('👏', 'You ate when you were actually hungry most of the time (${100 - pct}%). Good.'));
+          ? (Icons.explore_outlined, 'You weren’t really hungry for $low of ${batches.length} meals and snacks ($pct%). That’s the overeating to work on, more than portion size.')
+          : (Icons.thumb_up_outlined, 'You ate when you were actually hungry most of the time (${100 - pct}%). Good.'));
     }
     final friedDays = days.sublist(7).where((d) => c.entriesOn(d).any((e) => e.tags.contains('fried'))).length;
-    if (friedDays >= 5) ins.add(('🍳', 'You had fried food on $friedDays of 7 days. Cutting that to 2–3 days is probably the easiest single change you can make.'));
+    if (friedDays >= 5) ins.add((Icons.water_drop_outlined, 'You had fried food on $friedDays of 7 days. Cutting that to 2–3 days is probably the easiest single change you can make.'));
     final byFood = <String, double>{};
     for (final e in weekEntries) {
       byFood[e.name] = (byFood[e.name] ?? 0) + e.total;
     }
     final tf = byFood.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    if (tf.isNotEmpty) ins.add(('🏆', 'Most calories this week came from ${tf.first.key}: ${fmt(tf.first.value)} kcal.'));
+    if (tf.isNotEmpty) ins.add((Icons.emoji_events_outlined, 'Most calories this week came from ${tf.first.key}: ${fmt(tf.first.value)} kcal.'));
     return ins;
   }
 }

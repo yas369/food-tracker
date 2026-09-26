@@ -163,20 +163,25 @@ class Muted extends StatelessWidget {
   );
 }
 
-class EmojiBox extends StatelessWidget {
-  const EmojiBox(this.emoji, {super.key, this.size = 44, this.bg, this.radius = 14});
-  final String emoji;
+/// An icon on a tinted rounded square: the app's one way of showing a picture.
+class IconTile extends StatelessWidget {
+  const IconTile(this.icon, {super.key, this.size = 44, this.bg, this.fg, this.radius = 14});
+  final IconData icon;
   final double size;
   final double radius;
   final Color? bg;
+  final Color? fg;
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(color: bg ?? Pal.of(context).surface2, borderRadius: BorderRadius.circular(radius)),
-    child: Text(emoji, style: TextStyle(fontSize: size * 0.5)),
-  );
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: bg ?? p.brandSoft, borderRadius: BorderRadius.circular(radius)),
+      child: Icon(icon, size: size * .52, color: fg ?? p.brand),
+    );
+  }
 }
 
 class LevelBadge extends StatelessWidget {
@@ -198,8 +203,9 @@ class LevelBadge extends StatelessWidget {
 
 /// Green gradient button with white text.
 class GoButton extends StatelessWidget {
-  const GoButton(this.label, {super.key, required this.onPressed, this.big = false, this.expand = true});
+  const GoButton(this.label, {super.key, required this.onPressed, this.big = false, this.expand = true, this.icon});
   final String label;
+  final IconData? icon;
   final VoidCallback? onPressed;
   final bool big;
   final bool expand;
@@ -220,10 +226,18 @@ class GoButton extends StatelessWidget {
             constraints: BoxConstraints(minHeight: big ? 54 : 44),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             alignment: Alignment.center,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: onPressed == null ? Pal.of(context).muted : Colors.white, fontWeight: FontWeight.w800, fontSize: big ? 17 : 15),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[Icon(icon, size: big ? 20 : 18, color: onPressed == null ? Pal.of(context).muted : Colors.white), const SizedBox(width: 8)],
+                Flexible(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: onPressed == null ? Pal.of(context).muted : Colors.white, fontWeight: FontWeight.w800, fontSize: big ? 17 : 15),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -234,8 +248,9 @@ class GoButton extends StatelessWidget {
 }
 
 class SoftButton extends StatelessWidget {
-  const SoftButton(this.label, {super.key, required this.onPressed, this.color, this.slim = false});
+  const SoftButton(this.label, {super.key, required this.onPressed, this.color, this.slim = false, this.icon});
   final String label;
+  final IconData? icon;
   final VoidCallback? onPressed;
   final Color? color;
   final bool slim;
@@ -253,7 +268,12 @@ class SoftButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: slim ? 14 : 15),
       ),
-      child: Text(label),
+      child: icon == null
+          ? Text(label)
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [Icon(icon, size: slim ? 16 : 18), const SizedBox(width: 6), Flexible(child: Text(label))],
+            ),
     );
   }
 }
@@ -672,10 +692,10 @@ class NumberStepper extends StatelessWidget {
   }
 }
 
-/// A toggle row with an emoji, a title and a note.
+/// A toggle row with an icon, a title and a note.
 class SettingRow extends StatelessWidget {
-  const SettingRow({super.key, required this.emoji, required this.title, this.note, required this.trailing, this.first = false});
-  final String emoji;
+  const SettingRow({super.key, required this.icon, required this.title, this.note, required this.trailing, this.first = false});
+  final IconData icon;
   final String title;
   final String? note;
   final Widget trailing;
@@ -690,7 +710,7 @@ class SettingRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          EmojiBox(emoji, size: 36, bg: p.brandSoft, radius: 12),
+          IconTile(icon, size: 36, radius: 12),
           gap12,
           Expanded(
             child: Column(
@@ -709,7 +729,7 @@ class SettingRow extends StatelessWidget {
   }
 }
 
-/// Your photo, or your initials, or a smile.
+/// Your photo, or your initials, or a person icon.
 class Avatar extends StatelessWidget {
   const Avatar({super.key, required this.me, this.size = 38, this.border = 2});
   final Me me;
@@ -723,12 +743,13 @@ class Avatar extends StatelessWidget {
       inner = Image.memory(base64Decode(photo.substring(photo.indexOf(',') + 1)), fit: BoxFit.cover, width: size, height: size, gaplessPlayback: true);
     } else {
       final n = me.name.trim();
-      final initials = n.isEmpty ? '🙂' : n.split(RegExp(r'\s+')).take(2).map((w) => w[0]).join().toUpperCase();
       inner = Center(
-        child: Text(
-          initials,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: size * .36),
-        ),
+        child: n.isEmpty
+            ? Icon(Icons.person, color: Colors.white, size: size * .55)
+            : Text(
+                n.split(RegExp(r'\s+')).take(2).map((w) => w[0]).join().toUpperCase(),
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: size * .36),
+              ),
       );
     }
     return Container(
@@ -737,7 +758,7 @@ class Avatar extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: .2),
+        color: photo.isEmpty ? null : Colors.white.withValues(alpha: .2),
         gradient: photo.isEmpty ? const LinearGradient(colors: [Color(0xFF5B1BAA), Color(0xFF8B2CF5)]) : null,
         border: Border.all(color: Colors.white70, width: border),
       ),
@@ -746,10 +767,10 @@ class Avatar extends StatelessWidget {
   }
 }
 
-/// A settings-style row: optional emoji, a title, a quiet value, a chevron.
+/// A settings-style row: optional icon, a title, a quiet value, a chevron.
 class NavRow extends StatelessWidget {
-  const NavRow({super.key, this.emoji, required this.title, this.value, this.onTap, this.trailing, this.danger = false});
-  final String? emoji;
+  const NavRow({super.key, this.icon, required this.title, this.value, this.onTap, this.trailing, this.danger = false});
+  final IconData? icon;
   final String title;
   final String? value;
   final VoidCallback? onTap;
@@ -764,7 +785,10 @@ class NavRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            if (emoji != null) ...[Text(emoji!, style: const TextStyle(fontSize: 20)), const SizedBox(width: 14)],
+            if (icon != null) ...[
+              IconTile(icon!, size: 36, radius: 11, bg: danger ? p.highSoft : null, fg: danger ? p.high : null),
+              const SizedBox(width: 14),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

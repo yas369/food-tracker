@@ -7,6 +7,7 @@ import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../models.dart';
 import '../../store.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -92,7 +93,7 @@ class _GoalScreenState extends State<GoalScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(14),
                     child: Row(children: [
-                      EmojiBox(pl.emoji, size: 50, bg: p.soft(pl.tint), radius: 16),
+                      IconTile(planIcon(pl.id), size: 50, radius: 16, bg: p.soft(pl.tint), fg: p.strong(pl.tint)),
                       gap12,
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -137,7 +138,7 @@ class _GoalScreenState extends State<GoalScreen> {
                 _changed();
               })),
               _tile(p, 'SEX', Row(children: [
-                for (final (id, label) in [('m', '♂ Male'), ('f', '♀ Female')])
+                for (final (id, label) in [('m', 'Male'), ('f', 'Female')])
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -169,7 +170,15 @@ class _GoalScreenState extends State<GoalScreen> {
               })),
             ],
           ),
-          if (c.moveCredit) const Padding(padding: EdgeInsets.only(top: 12), child: Muted('🏃 Movement tracking is on, so your activity comes from steps and workouts in the Move tab.')),
+          if (c.moveCredit)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.directions_walk, size: 18, color: p.muted),
+                gap8,
+                const Expanded(child: Muted('Movement tracking is on, so your activity comes from steps and workouts in the Move tab.')),
+              ]),
+            ),
           gap12,
           Opacity(
             opacity: c.moveCredit ? .45 : 1,
@@ -191,7 +200,8 @@ class _GoalScreenState extends State<GoalScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(10),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(a.emoji, style: const TextStyle(fontSize: 22)),
+                            Icon(activityIcon(a.v), size: 24, color: draft.activity == a.v ? p.brand : p.muted),
+                            gap4,
                             Text(a.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                             Muted(a.desc, size: 12),
                           ]),

@@ -7,6 +7,7 @@ import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../store.dart';
 import '../feedback.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -46,7 +47,7 @@ class _MoveScreenState extends State<MoveScreen> {
     if (picked == null || !mounted) return;
     store.addWorkout(picked.$1, picked.$2);
     final w = workoutInfo(picked.$1)!;
-    toast(context, '${w.emoji} ${w.title} added · ${fmt((w.met - 1) * c.bodyKg * picked.$2 / 60)} kcal');
+    toast(context, '${w.title} added · ${fmt((w.met - 1) * c.bodyKg * picked.$2 / 60)} kcal');
   }
 
   @override
@@ -89,9 +90,9 @@ class _MoveScreenState extends State<MoveScreen> {
                 ? 'Your phone counts your steps. Steps and workouts become calories burnt, added to your food limit.'
                 : 'Log workouts here, or type in steps from a watch. Automatic step counting works in the Android app.'),
             gap12,
-            GoButton('Start tracking', onPressed: () async {
+            GoButton('Start tracking', icon: Icons.directions_walk, onPressed: () async {
               await store.startMove();
-              if (context.mounted) toast(context, 'Movement tracking on 🏃');
+              if (context.mounted) toast(context, 'Movement tracking on');
             }),
           ]),
         )
@@ -116,7 +117,7 @@ class _MoveScreenState extends State<MoveScreen> {
           if (list.isEmpty) const Muted('None yet.'),
           for (var i = 0; i < list.length; i++)
             Row(children: [
-              Text(workoutInfo(list[i].id)?.emoji ?? '💪', style: const TextStyle(fontSize: 20)),
+              IconTile(workoutIcon(list[i].id), size: 36, radius: 11),
               gap12,
               Expanded(child: Text('${workoutInfo(list[i].id)?.title ?? list[i].id} · ${list[i].min} min')),
               Text('${fmt(c.workoutKcal(list[i]))} kcal', style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -130,7 +131,7 @@ class _MoveScreenState extends State<MoveScreen> {
               ),
             ]),
           gap12,
-          SoftButton('+ Add a workout', onPressed: _addWorkout),
+          SoftButton('Add a workout', icon: Icons.add, onPressed: _addWorkout),
         ]),
       ),
       AppCard(
@@ -227,7 +228,10 @@ class _WorkoutSheetState extends State<_WorkoutSheet> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(w == null ? 'What did you do?' : '${w.emoji} ${w.title}: how long?', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Row(children: [
+            if (w != null) ...[IconTile(workoutIcon(w.id), size: 36, radius: 11), gap12],
+            Expanded(child: Text(w == null ? 'What did you do?' : '${w.title}: how long?', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+          ]),
           gap12,
           if (w == null)
             LayoutBuilder(builder: (context, box) {
@@ -245,7 +249,7 @@ class _WorkoutSheetState extends State<_WorkoutSheet> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
                           child: Column(children: [
-                            Text(x.emoji, style: const TextStyle(fontSize: 26)),
+                            Icon(workoutIcon(x.id), size: 28, color: p.brand),
                             gap4,
                             Text(x.title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, height: 1.2)),
                           ]),
@@ -262,7 +266,7 @@ class _WorkoutSheetState extends State<_WorkoutSheet> {
             ]),
             if (w.id == 'walk' && widget.stepsCount) const Padding(padding: EdgeInsets.only(top: 10), child: Muted('Your steps already count walks. Add one only if your phone wasn’t with you.')),
             gap8,
-            TextButton(onPressed: () => setState(() => picked = null), child: const Text('‹ Pick another')),
+            TextButton.icon(onPressed: () => setState(() => picked = null), icon: const Icon(Icons.arrow_back, size: 18), label: const Text('Pick another')),
           ],
         ]),
       ),

@@ -50,7 +50,7 @@ class _Starting extends StatelessWidget {
         body: Container(
           decoration: BoxDecoration(gradient: heroGradient(Pal.of(context))),
           child: Stack(children: [
-            const Center(child: Text('🍽️', style: TextStyle(fontSize: 64))),
+            const Center(child: Icon(Icons.restaurant, size: 64, color: Colors.white)),
             ValueListenableBuilder<WebViewController?>(
               valueListenable: migrationWebView,
               builder: (_, c, _) => c == null ? const SizedBox.shrink() : SizedBox(width: 1, height: 1, child: WebViewWidget(controller: c)),
@@ -138,7 +138,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final h = store.now.hour;
     final g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
     final n = store.d.me.name.trim().split(RegExp(r'\s+')).first;
-    return '$g${n.isEmpty ? '' : ', $n'} 👋';
+    return '$g${n.isEmpty ? '' : ', $n'}';
   }
 
   @override

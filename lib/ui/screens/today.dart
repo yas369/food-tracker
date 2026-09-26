@@ -8,6 +8,7 @@ import '../../logic.dart';
 import '../../models.dart';
 import '../../store.dart';
 import '../feedback.dart';
+import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'add_food.dart';
@@ -47,7 +48,7 @@ class _TodayScreenState extends State<TodayScreen> {
           ]),
         ),
       if (isToday && target > 0) _NextUp(store: store),
-      if (nudge != null) _Nudge(emoji: nudge.$1, text: nudge.$2),
+      if (nudge != null) _Nudge(icon: nudge.$1, text: nudge.$2),
       _MealList(store: store, day: day, open: open, onToggle: (m) => setState(() => open = open == m ? null : m)),
     ]);
     // Swipe right for the day before, left for the day after.
@@ -62,14 +63,14 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   /// At most one nudge: the one that matters most right now.
-  (String, String)? _topNudge(List<Entry> entries) {
+  (IconData, String)? _topNudge(List<Entry> entries) {
     double count(String tag) => entries.where((e) => e.tags.contains(tag)).fold(0.0, (a, e) => a + e.qty);
     final unhungry = {for (final e in entries) if (e.hunger != null && e.hunger! <= 2) e.b}.length;
-    if (unhungry >= 2) return ('🧭', 'You ate $unhungry times today without being hungry. That’s where overeating usually starts.');
-    if (count('fried') >= 2) return ('🍳', 'Two or more fried items today. Keep the rest non-fried.');
-    if (count('sweet') >= 3) return ('🍬', 'Three sweet items today, counting tea and coffee. Try the next one without sugar.');
-    if (entries.isNotEmpty && count('plant') == 0 && store.now.hour >= 14) return ('🥦', 'No vegetables or fruit yet. Aim for half your plate.');
-    if (entries.length >= 3 && count('protein') == 0) return ('🥚', 'No protein yet. Dal, curd or eggs will keep you fuller.');
+    if (unhungry >= 2) return (Icons.explore_outlined, 'You ate $unhungry times today without being hungry. That’s where overeating usually starts.');
+    if (count('fried') >= 2) return (Icons.water_drop_outlined, 'Two or more fried items today. Keep the rest non-fried.');
+    if (count('sweet') >= 3) return (Icons.cake_outlined, 'Three sweet items today, counting tea and coffee. Try the next one without sugar.');
+    if (entries.isNotEmpty && count('plant') == 0 && store.now.hour >= 14) return (Icons.eco_outlined, 'No vegetables or fruit yet. Aim for half your plate.');
+    if (entries.length >= 3 && count('protein') == 0) return (Icons.egg_outlined, 'No protein yet. Dal, curd or eggs will keep you fuller.');
     return null;
   }
 }
@@ -152,7 +153,7 @@ class _NextUp extends StatelessWidget {
     if (next == null) {
       return AppCard(
         child: Row(children: [
-          const Text('🌙', style: TextStyle(fontSize: 26)),
+          const IconTile(Icons.done_all, size: 40, radius: 12),
           gap12,
           const Expanded(child: Text('All meals logged. The kitchen can close for today.', style: TextStyle(fontSize: 15))),
         ]),
@@ -163,9 +164,15 @@ class _NextUp extends StatelessWidget {
     final time = store.d.settings.reminders.where((r) => r.meal == meal.id).map((r) => clock12(r.time)).firstOrNull;
     return AppCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('NEXT UP · ${meal.label.toUpperCase()}${time == null ? '' : ' · $time'}',
-            style: TextStyle(fontSize: 12, letterSpacing: .8, fontWeight: FontWeight.w700, color: p.muted)),
-        gap8,
+        Row(children: [
+          IconTile(mealIcon(meal.id), size: 32, radius: 10, bg: p.soft(meal.tint), fg: p.strong(meal.tint)),
+          gap8,
+          Expanded(
+            child: Text('NEXT UP · ${meal.label.toUpperCase()}${time == null ? '' : ' · $time'}',
+                style: TextStyle(fontSize: 12, letterSpacing: .8, fontWeight: FontWeight.w700, color: p.muted)),
+          ),
+        ]),
+        gap12,
         if (plan == null)
           const Text('Nothing from your kitchen fits this meal. Log what you eat.', style: TextStyle(fontSize: 15))
         else ...[
@@ -181,7 +188,7 @@ class _NextUp extends StatelessWidget {
         Row(children: [
           if (plan != null) ...[
             Expanded(
-              child: GoButton('I ate this', onPressed: () {
+              child: GoButton('I ate this', icon: Icons.check, onPressed: () {
                 final k = store.logPlan(meal.id);
                 final b = store.lastBatch;
                 if (k != null && b != null) showUndo(context, '${meal.label} logged · ${fmt(k)} kcal', () => store.removeBatch(store.today, b), buzz: true);
@@ -212,7 +219,7 @@ class _Yesterday extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(over > 0 ? '🌅' : '👏', style: const TextStyle(fontSize: 16)),
+        Icon(over > 0 ? Icons.restart_alt : Icons.check_circle_outline, size: 18, color: over > 0 ? Pal.of(context).muted : Pal.of(context).green),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
@@ -227,8 +234,8 @@ class _Yesterday extends StatelessWidget {
 }
 
 class _Nudge extends StatelessWidget {
-  const _Nudge({required this.emoji, required this.text});
-  final String emoji;
+  const _Nudge({required this.icon, required this.text});
+  final IconData icon;
   final String text;
   @override
   Widget build(BuildContext context) => Container(
@@ -236,7 +243,7 @@ class _Nudge extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(color: Pal.of(context).medSoft, borderRadius: BorderRadius.circular(16)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(emoji, style: const TextStyle(fontSize: 18)),
+          Icon(icon, size: 20, color: Pal.of(context).med),
           gap12,
           Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
         ]),
@@ -268,7 +275,7 @@ class _MealList extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
                   child: Row(children: [
-                    Text(m.emoji, style: const TextStyle(fontSize: 22)),
+                    IconTile(mealIcon(m.id), size: 40, radius: 12, bg: p.soft(m.tint), fg: p.strong(m.tint)),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -305,7 +312,7 @@ class _EntryRow extends StatelessWidget {
     return InkWell(
       onTap: () => _editEntry(context, store, day, index),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(52, 0, 4, 4),
+        padding: const EdgeInsets.fromLTRB(70, 0, 4, 4), // lines up with the meal name
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
