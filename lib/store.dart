@@ -54,9 +54,8 @@ class AppStore extends ChangeNotifier {
       await refreshPermissions();
       await reschedule();
     } catch (_) {}
-    await steps.checkPermission();
-    if (d.move.on) steps.start(_onSteps);
-    notifyListeners();
+    steps.onChange = notifyListeners;
+    await resumeSteps();
   }
 
   // ---------- Saving ----------
@@ -231,6 +230,14 @@ class AppStore extends ChangeNotifier {
     recordSteps(d.move, count, boot, at, today);
     save(reminders: false);
     if (c.stepsOn(today).round() != before) notifyListeners();
+  }
+
+  /// On start and whenever the app comes back: pick up a permission allowed
+  /// in Android settings meanwhile, and start counting again if it stopped.
+  Future<void> resumeSteps() async {
+    await steps.checkPermission();
+    if (d.move.on) steps.start(_onSteps);
+    notifyListeners();
   }
 
   Future<void> startMove() async {

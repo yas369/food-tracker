@@ -89,6 +89,13 @@ keeps the last reading and credits the difference to the right days (split
 across midnight by time, with restarts detected from `/proc/uptime`). On some
 phones the counter only counts reliably if the app is opened about once a day.
 
+Each time the app comes back to the screen it checks the "Physical activity"
+permission again and restarts the sensor if it had stopped, so allowing it in
+Android settings takes effect straight away. If Android has blocked the
+permission (after it was refused twice), Move offers *Open settings*. Until the
+first reading arrives, Move says it's waiting for the sensor; if steps typed
+in from a watch are higher than the phone's count, it says that too.
+
 ## Working on it
 
 ```
