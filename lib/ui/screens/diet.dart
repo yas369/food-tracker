@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../store.dart';
+import '../feedback.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -32,6 +33,9 @@ class _DietScreenState extends State<DietScreen> {
     final pref = dietPrefInfo(store.d.settings.dietPref);
     final have = c.pantry.toList();
     final logged = {for (final e in c.entriesOn(day)) e.meal};
+    final burnt = offset == 0 && c.moveCredit ? c.burntOn(day) : 0;
+    // Today, meals already eaten shrink to one line at the bottom.
+    final order = offset == 0 ? [...plans.where((x) => !logged.contains(x.$1.id)), ...plans.where((x) => logged.contains(x.$1.id))] : plans;
     final times = {for (final r in store.d.settings.reminders) if (r.meal != null) r.meal!: r.time};
 
     return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 120), children: [
@@ -49,10 +53,25 @@ class _DietScreenState extends State<DietScreen> {
         child: Text.rich(TextSpan(style: TextStyle(color: p.muted, fontSize: 14), children: [
           TextSpan(text: target > 0 ? '${fmt(dayTotal)} kcal planned' : 'Set up your goal first', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
           if (target > 0) TextSpan(text: ' · fits your ${fmt(target)} limit · ${pref.emoji} ${pref.short}'),
+          if (target > 0 && burnt > 0) TextSpan(text: ' · +${fmt(burnt)} from moving'),
         ])),
       ),
-      for (final (m, plan) in plans)
-        if (plan != null)
+      for (final (m, plan) in order)
+        if (offset == 0 && logged.contains(m.id))
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(children: [
+              Text(m.emoji, style: const TextStyle(fontSize: 18)),
+              gap12,
+              Expanded(child: Text(m.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
+              gap8,
+              Flexible(
+                child: Text('✓ Logged · ${fmt(sumKcal(c.entriesOn(day).where((e) => e.meal == m.id).toList()))} kcal',
+                    textAlign: TextAlign.end, style: TextStyle(color: p.green, fontWeight: FontWeight.w700)),
+              ),
+            ]),
+          )
+        else if (plan != null)
           AppCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
@@ -70,21 +89,19 @@ class _DietScreenState extends State<DietScreen> {
               for (final x in plan.items)
                 Padding(padding: const EdgeInsets.only(top: 2), child: Muted('${qtyUnit(x.qty, x.f.unit)} ${x.name.toLowerCase()}', size: 14)),
               gap12,
-              if (offset == 0 && logged.contains(m.id))
-                Text('✓ Logged', style: TextStyle(color: p.green, fontWeight: FontWeight.w700))
-              else
-                Row(children: [
-                  if (c.dietOptions(m.id).length > 1) Expanded(child: SoftButton('Another option', slim: true, onPressed: () => store.nextOption(day, m.id))),
-                  if (offset == 0) ...[
-                    gap8,
-                    Expanded(
-                      child: GoButton('✓ I ate this', onPressed: () {
-                        final k = store.logPlan(m.id);
-                        if (k != null) toast(context, '${m.label} logged ✅ ${fmt(k)} kcal');
-                      }),
-                    ),
-                  ],
-                ]),
+              Row(children: [
+                if (c.dietOptions(m.id).length > 1) Expanded(child: SoftButton('Another option', slim: true, onPressed: () => store.nextOption(day, m.id))),
+                if (offset == 0) ...[
+                  gap8,
+                  Expanded(
+                    child: GoButton('✓ I ate this', onPressed: () {
+                      final k = store.logPlan(m.id);
+                      final b = store.lastBatch;
+                      if (k != null && b != null) showUndo(context, '${m.label} logged · ${fmt(k)} kcal', () => store.removeBatch(day, b), buzz: true);
+                    }),
+                  ),
+                ],
+              ]),
             ]),
           )
         else if (target > 0)

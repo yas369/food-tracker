@@ -4,6 +4,7 @@ import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../models.dart';
 import '../../store.dart';
+import '../feedback.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -193,12 +194,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       ]),
       if (q.isEmpty && cat.isEmpty && lv.isEmpty && recent.isNotEmpty) ...[
         const _CatTitle('🕘 Recent'),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            for (final f in recent) Padding(padding: const EdgeInsets.only(right: 10), child: SizedBox(width: 158, child: _foodCard(p, f))),
-          ]),
-        ),
+        Group(children: [for (final f in recent.take(5)) _recentRow(p, f)]),
       ],
       if (byCat.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Muted('🤷 No match. Add it as a custom food below.', align: TextAlign.center)),
       for (final e in byCat.entries) ...[
@@ -233,10 +229,53 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         }
       });
 
+  /// Recent foods as compact rows: most meals repeat, so these come first.
+  Widget _recentRow(Pal p, Food f) => Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Row(children: [
+          EmojiBox(emojiFor(f.id, f.cat), size: 40, bg: p.levelSoft(levelOf(f.kcal))),
+          gap12,
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              Muted('${f.unit} · ${f.kcal} kcal', size: 12),
+            ]),
+          ),
+          gap8,
+          _qtyControl(p, f),
+        ]),
+      );
+
+  Widget _qtyControl(Pal p, Food f) {
+    final qty = tray[f.id] ?? 0;
+    final s = stepFor(f);
+    if (qty == 0) {
+      return OutlinedButton(
+        onPressed: () => _set(f.id, 1),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: p.green,
+          side: BorderSide(color: p.green, width: 1.5),
+          minimumSize: const Size(0, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+        ),
+        child: Semantics(label: 'Add ${f.name}', child: const Text('ADD')),
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(color: Pal.goSolid, borderRadius: BorderRadius.circular(10)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _qtyBtn('−', 'Less ${f.name}', () => _set(f.id, qty - s)),
+        Text(fmtQty(qty), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        _qtyBtn('+', 'More ${f.name}', () => _set(f.id, qty + s)),
+      ]),
+    );
+  }
+
   Widget _foodCard(Pal p, Food f) {
     final qty = tray[f.id] ?? 0;
     final lvl = levelOf(f.kcal);
-    final s = stepFor(f);
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -262,28 +301,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             TextSpan(text: '${f.kcal}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             TextSpan(text: ' kcal', style: TextStyle(fontSize: 11, color: p.muted)),
           ]))),
-          if (qty == 0)
-            OutlinedButton(
-              onPressed: () => _set(f.id, 1),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: p.green,
-                side: BorderSide(color: p.green, width: 1.5),
-                minimumSize: const Size(0, 32),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-              ),
-              child: Semantics(label: 'Add ${f.name}', child: const Text('ADD')),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(color: Pal.goSolid, borderRadius: BorderRadius.circular(10)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                _qtyBtn('−', 'Less ${f.name}', () => _set(f.id, qty - s)),
-                Text(fmtQty(qty), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                _qtyBtn('+', 'More ${f.name}', () => _set(f.id, qty + s)),
-              ]),
-            ),
+          _qtyControl(p, f),
         ]),
       ]),
     );
@@ -367,8 +385,13 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                           style: TextStyle(fontSize: 13, color: items.isEmpty ? p.muted : Colors.white.withValues(alpha: .92))),
                     ]),
                   ),
-                  if (items.isNotEmpty)
-                    Text('${lvl == 'over' ? 'Add anyway' : 'Add to ${mealInfo(meal).label}'} ›', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                  if (items.isNotEmpty) ...[
+                    gap8,
+                    Flexible(
+                      child: Text('${lvl == 'over' ? 'Add anyway' : 'Add to ${mealInfo(meal).label}'} ›',
+                          textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                    ),
+                  ],
                 ]),
               ),
             ),
@@ -410,9 +433,9 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         : target > 0 && total >= target * .8
             ? '${fmt(target - total)} kcal left. Keep the next meal light.'
             : 'Logged ✅';
-    final messenger = ScaffoldMessenger.of(context);
+    final home = Navigator.of(context).context;
     Navigator.pop(context);
-    messenger.showSnackBar(SnackBar(content: Text(msg)));
+    showUndo(home, msg, () => store.removeBatch(widget.day, b), buzz: true);
   }
 }
 

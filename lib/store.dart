@@ -118,12 +118,38 @@ class AppStore extends ChangeNotifier {
     return e;
   }
 
+  /// Put back an entry that was just removed (undo).
+  void restoreEntry(String day, int i, Entry e) {
+    final list = d.log.putIfAbsent(day, () => []);
+    list.insert(i.clamp(0, list.length), e);
+    save();
+  }
+
+  /// Remove everything logged together in one go (undo of a log).
+  void removeBatch(String day, String b) {
+    final list = d.log[day];
+    if (list == null) return;
+    list.removeWhere((e) => e.b == b);
+    if (list.isEmpty) d.log.remove(day);
+    save();
+  }
+
+  /// Change how much of a logged food was eaten.
+  void setEntryQty(String day, int i, double qty) {
+    final e = d.log[day]![i];
+    d.log[day]![i] = Entry(f: e.f, name: e.name, unit: e.unit, kcal: e.kcal, tags: e.tags, qty: qty, meal: e.meal, hunger: e.hunger, b: e.b, t: e.t);
+    save();
+  }
+
   String newBatch() => DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+
+  /// The batch id of the last planned meal logged, so it can be undone.
+  String? lastBatch;
 
   int? logPlan(String meal) {
     final plan = c.planFor(today, meal);
     if (plan == null) return null;
-    final b = newBatch();
+    final b = lastBatch = newBatch();
     final t = now.millisecondsSinceEpoch;
     addEntries(today, [
       for (final x in plan.items)
@@ -245,8 +271,15 @@ class AppStore extends ChangeNotifier {
     save();
   }
 
-  void removeWorkout(int i) {
-    d.move.workouts[today]?.removeAt(i);
+  Workout? removeWorkout(int i) {
+    final w = d.move.workouts[today]?.removeAt(i);
+    save();
+    return w;
+  }
+
+  void restoreWorkout(int i, Workout w) {
+    final list = d.move.workouts.putIfAbsent(today, () => []);
+    list.insert(i.clamp(0, list.length), w);
     save();
   }
 
