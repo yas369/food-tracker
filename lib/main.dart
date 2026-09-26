@@ -3,11 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'data/catalog.dart';
-import 'logic.dart';
 import 'services/webview_migration.dart';
 import 'store.dart';
 import 'ui/screens/add_food.dart';
 import 'ui/screens/diet.dart';
+import 'ui/screens/goal.dart';
 import 'ui/screens/me.dart';
 import 'ui/screens/move.dart';
 import 'ui/screens/onboarding.dart';
@@ -68,7 +68,7 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
-  late int tab = widget.store.d.profile == null ? 4 : 0;
+  int tab = 0;
   late String day = widget.store.today;
   late String lastToday = widget.store.today;
   bool setupShown = false;
@@ -114,10 +114,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (setupShown || store.d.me.onboarded) return;
     setupShown = true;
     await openSetup(context, store, SetupMode.onboard);
-    if (mounted && store.d.profile == null) {
-      setState(() => tab = 4);
-      toast(context, 'Last step: your body numbers and goal');
-    }
+    if (mounted && store.d.profile == null) await openGoal(context, store);
   }
 
   void _openFromNotification(String payload) {
@@ -147,8 +144,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    final c = store.c;
-    final t = c.dailyTarget(store.today);
     final prof = store.d.profile;
     return PopScope(
       canPop: tab == 0 && day == store.today,
@@ -163,44 +158,25 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         });
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+        value: (p.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark).copyWith(statusBarColor: Colors.transparent),
         child: Scaffold(
           backgroundColor: p.bg,
           body: Column(children: [
-            Container(
-              decoration: BoxDecoration(gradient: heroGradient(p)),
-              padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 10),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 8),
               child: Row(children: [
-                GestureDetector(onTap: () => setState(() => tab = 4), child: Avatar(me: store.d.me)),
+                GestureDetector(onTap: () => setState(() => tab = 4), child: Avatar(me: store.d.me, size: 36, border: 0)),
                 gap12,
-                Expanded(child: Text(_title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800))),
-                if (t > 0 && prof != null)
-                  Material(
-                    color: Colors.white.withValues(alpha: .18),
-                    shape: const StadiumBorder(),
-                    child: InkWell(
-                      customBorder: const StadiumBorder(),
-                      onTap: () => setState(() => tab = 4),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text('${prof.override != null ? 'Own' : planInfo(prof.plan).name.split(' ').first} · ${fmt(t)}',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-                        ]),
-                      ),
-                    ),
-                  ),
+                Expanded(child: Text(_title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
               ]),
             ),
             Expanded(
               child: switch (tab) {
-                0 => TodayScreen(store: store, day: day, onDay: (d) => setState(() => day = d), goMe: () => setState(() => tab = 4)),
+                0 => TodayScreen(store: store, day: day, onDay: (d) => setState(() => day = d), goMe: () => openGoal(context, store)),
                 1 => DietScreen(store: store, goMe: () => setState(() => tab = 4)),
                 2 => MoveScreen(store: store),
                 3 => ProgressScreen(store: store),
-                _ => MeScreen(store: store, onDone: () => setState(() => tab = 0)),
+                _ => MeScreen(store: store),
               },
             ),
           ]),

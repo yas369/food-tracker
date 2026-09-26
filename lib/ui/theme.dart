@@ -37,7 +37,7 @@ class Pal {
 
   static const light = Pal._(
     dark: false,
-    bg: Color(0xFFF5F0FC), surface: Color(0xFFFFFFFF), surface2: Color(0xFFF1E9FC),
+    bg: Color(0xFFF7F5FB), surface: Color(0xFFFFFFFF), surface2: Color(0xFFF1E9FC),
     text: Color(0xFF1D0F33), muted: Color(0xFF6D5F86), line: Color(0xFFE8DDF6),
     brand: Color(0xFF5B1BAA), brand2: Color(0xFF8B2CF5), brandDeep: Color(0xFF3A0873), brandSoft: Color(0xFFEFE4FF),
     green: Color(0xFF0FA548), greenSoft: Color(0xFFE3F8EA),

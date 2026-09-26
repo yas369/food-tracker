@@ -34,150 +34,82 @@ class _DietScreenState extends State<DietScreen> {
     final logged = {for (final e in c.entriesOn(day)) e.meal};
     final times = {for (final r in store.d.settings.reminders) if (r.meal != null) r.meal!: r.time};
 
-    return ListView(padding: const EdgeInsets.only(bottom: 120), children: [
-      HeroBox(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          gap8,
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(14)),
-            child: Row(children: [
-              for (var n = 0; n < 3; n++)
-                Expanded(
-                  child: Material(
-                    color: n == offset ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(11),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(11),
-                      onTap: () => setState(() => offset = n),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 9),
-                        child: Text(n == 0 ? 'Today' : n == 1 ? 'Tomorrow' : weekdayShort(addDays(today, n)),
-                            textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, color: n == offset ? p.brandDeep : Colors.white70)),
-                      ),
-                    ),
-                  ),
-                ),
-            ]),
-          ),
-          gap16,
-          Text(target > 0 ? fmt(dayTotal) : '–', style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, height: 1.1)),
-          Text(target > 0 ? 'kcal planned of your ${fmt(target)} limit${c.moveCredit ? ' (plus what you burn moving)' : ''}' : 'Set up your goal first',
-              style: const TextStyle(color: Colors.white70)),
-          gap12,
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(99)),
-            child: Text('${pref.emoji} ${pref.short} · from your profile', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
-          ),
-        ]),
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 120), children: [
+      SegmentedButton<int>(
+        showSelectedIcon: false,
+        segments: [
+          for (var n = 0; n < 3; n++)
+            ButtonSegment(value: n, label: Text(n == 0 ? 'Today' : n == 1 ? 'Tomorrow' : weekdayShort(addDays(today, n)))),
+        ],
+        selected: {offset},
+        onSelectionChanged: (s) => setState(() => offset = s.first),
       ),
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(children: [
+        padding: const EdgeInsets.fromLTRB(4, 14, 4, 12),
+        child: Text.rich(TextSpan(style: TextStyle(color: p.muted, fontSize: 14), children: [
+          TextSpan(text: target > 0 ? '${fmt(dayTotal)} kcal planned' : 'Set up your goal first', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
+          if (target > 0) TextSpan(text: ' · fits your ${fmt(target)} limit · ${pref.emoji} ${pref.short}'),
+        ])),
+      ),
+      for (final (m, plan) in plans)
+        if (plan != null)
           AppCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                EmojiBox('🧺', bg: p.greenSoft),
-                gap12,
+                Text(m.emoji, style: const TextStyle(fontSize: 20)),
+                gap8,
                 Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Your kitchen', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                    Muted('${have.length} items at home'),
-                  ]),
+                  child: Text('${m.label.toUpperCase()}${times[m.id] != null ? ' · ${clock12(times[m.id]!)}' : ''}',
+                      style: TextStyle(fontSize: 12, letterSpacing: .8, fontWeight: FontWeight.w700, color: p.muted)),
                 ),
+                Text('${fmt(plan.kcal)} kcal', style: TextStyle(fontWeight: FontWeight.w700, color: p.brand)),
               ]),
               gap8,
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                for (final id in have.take(14))
-                  if (pantryInfo[id] != null) EmojiBox(pantryInfo[id]!.emoji, size: 38, radius: 12),
-                if (have.length > 14) EmojiBox('+${have.length - 14}', size: 38, radius: 12),
-              ]),
-              gap8,
-              Row(children: [
-                const Expanded(child: Muted('Plans only use what you have at home.')),
-                TextButton(onPressed: widget.goMe, child: const Text('Change in Me')),
-              ]),
+              Text(plan.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              gap4,
+              for (final x in plan.items)
+                Padding(padding: const EdgeInsets.only(top: 2), child: Muted('${qtyUnit(x.qty, x.f.unit)} ${x.name.toLowerCase()}', size: 14)),
+              gap12,
+              if (offset == 0 && logged.contains(m.id))
+                Text('✓ Logged', style: TextStyle(color: p.green, fontWeight: FontWeight.w700))
+              else
+                Row(children: [
+                  if (c.dietOptions(m.id).length > 1) Expanded(child: SoftButton('Another option', slim: true, onPressed: () => store.nextOption(day, m.id))),
+                  if (offset == 0) ...[
+                    gap8,
+                    Expanded(
+                      child: GoButton('✓ I ate this', onPressed: () {
+                        final k = store.logPlan(m.id);
+                        if (k != null) toast(context, '${m.label} logged ✅ ${fmt(k)} kcal');
+                      }),
+                    ),
+                  ],
+                ]),
+            ]),
+          )
+        else if (target > 0)
+          AppCard(
+            child: Row(children: [
+              Text(m.emoji, style: const TextStyle(fontSize: 20)),
+              gap12,
+              Expanded(child: Text('${m.label}: nothing in your kitchen fits.', style: const TextStyle(fontSize: 15))),
+              TextButton(onPressed: widget.goMe, child: const Text('Update kitchen')),
             ]),
           ),
+      Fold(
+        title: 'How plans are made',
+        subtitle: 'From your kitchen · ${have.length} items',
+        children: [
+          const Muted('Amounts are sized so the day fits your limit, using only what you have at home. The limit is a ceiling, not a target: if you’re full on less, stop.', size: 14),
+          gap12,
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final id in have)
+              if (pantryInfo[id] != null) Chip(label: Text('${pantryInfo[id]!.emoji} ${pantryInfo[id]!.label}'), visualDensity: VisualDensity.compact),
+          ]),
+          Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: widget.goMe, child: const Text('Change in Me'))),
           const _PlateGuide(),
-          for (final (m, plan) in plans)
-            if (plan == null)
-              if (target > 0)
-                AppCard(
-                  child: Row(children: [
-                    EmojiBox(m.emoji, bg: p.soft(m.tint)),
-                    gap12,
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(m.label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                        const Muted('Nothing in your kitchen fits this meal.'),
-                      ]),
-                    ),
-                    TextButton(onPressed: widget.goMe, child: const Text('Update kitchen')),
-                  ]),
-                )
-              else
-                const SizedBox.shrink()
-            else
-              AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Column(children: [
-                  Row(children: [
-                    EmojiBox(m.emoji, bg: p.soft(m.tint)),
-                    gap12,
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text.rich(TextSpan(children: [
-                          TextSpan(text: m.label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                          if (times[m.id] != null) TextSpan(text: '  · ${clock12(times[m.id]!)}', style: TextStyle(fontSize: 13, color: p.muted, fontWeight: FontWeight.w600)),
-                        ])),
-                        Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      ]),
-                    ),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text(fmt(plan.kcal), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: p.brand)),
-                      const Muted('kcal', size: 11),
-                    ]),
-                  ]),
-                  for (final x in plan.items)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.only(top: 8),
-                      decoration: BoxDecoration(border: Border(top: BorderSide(color: p.line))),
-                      child: Row(children: [
-                        EmojiBox(emojiFor(x.f.id, x.f.cat), size: 34, radius: 10, bg: p.levelSoft(levelOf(x.f.kcal))),
-                        gap12,
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(x.name, style: const TextStyle(fontSize: 15)),
-                            Muted(qtyUnit(x.qty, x.f.unit), size: 12),
-                          ]),
-                        ),
-                        Text(fmt(x.kcal), style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ]),
-                    ),
-                  gap12,
-                  Row(children: [
-                    if (c.dietOptions(m.id).length > 1)
-                      Expanded(child: SoftButton('🔄 Another option', slim: true, onPressed: () => store.nextOption(day, m.id))),
-                    if (offset == 0) ...[
-                      gap8,
-                      Expanded(
-                        child: logged.contains(m.id)
-                            ? const SoftButton('✓ Logged', slim: true, onPressed: null)
-                            : GoButton('✓ I ate this', onPressed: () {
-                                final k = store.logPlan(m.id);
-                                if (k != null) toast(context, '${m.label} logged ✅ ${fmt(k)} kcal');
-                              }),
-                      ),
-                    ],
-                  ]),
-                ]),
-              ),
-          const Muted(
-              'Amounts are sized so the day fits your limit. The limit is a ceiling, not a target: if you’re full on less, stop. This is general guidance, not medical advice. If you have diabetes, kidney or heart disease, are pregnant, or take medicines that interact with food, check with a doctor or dietitian first.'),
-        ]),
+          const Muted('This is general guidance, not medical advice. If you have diabetes, kidney or heart disease, are pregnant, or take medicines that interact with food, check with a doctor or dietitian first.'),
+        ],
       ),
     ]);
   }
@@ -196,9 +128,11 @@ class _PlateGuide extends StatelessWidget {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(t, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)), Muted(s, size: 12)])),
           ]),
         );
-    return AppCard(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SectionTitle('🍽️ How to fill your plate'),
+        const Text('How to fill your plate', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        gap12,
         Row(children: [
           SizedBox(width: 116, height: 116, child: CustomPaint(painter: _PlatePainter(p.surface2))),
           gap16,

@@ -60,10 +60,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.d.me.onboarded, isTrue);
     expect(store.d.settings.dietPref, 'egg');
-    expect(find.text('Me'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('Save and start tracking'), 300, scrollable: find.byType(Scrollable).first);
-    await tester.ensureVisible(find.text('Save and start tracking'));
-    await tester.pumpAndSettle();
+    expect(find.text('Last step: your goal'), findsOneWidget, reason: 'the goal page follows setup');
     await tester.tap(find.text('Save and start tracking'));
     await settle(tester);
     // Defaults (30 y, 165 cm, 70 kg, light activity) on the low plan.
@@ -91,14 +88,14 @@ void main() {
     await tester.tap(find.textContaining('Add to Lunch ›'));
     await settle(tester);
     expect(store.d.log['2026-09-26']!.single.qty, 0.5);
-    expect(find.text('275'), findsWidgets);
+    expect(find.text('1 item · 275 kcal'), findsOneWidget);
   });
 
   testWidgets('a snack asks how hungry you are, and "not hungry" offers a wait', (tester) async {
     final store = await start(tester, data: ready());
-    await tester.ensureVisible(find.text('+ ADD').at(2)); // Snacks
+    await tester.ensureVisible(find.byTooltip('Add to Snacks'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('+ ADD').at(2));
+    await tester.tap(find.byTooltip('Add to Snacks'));
     await tester.pumpAndSettle();
     expect(find.text('Before you eat'), findsOneWidget);
     await tester.tap(find.text('Not hungry'));
@@ -130,8 +127,7 @@ void main() {
     final store = await start(tester, data: ready());
     await tester.tap(find.text('Diet'));
     await tester.pumpAndSettle();
-    expect(find.text('🥦 Veg · from your profile'), findsOneWidget);
-    expect(find.text('Change in Me'), findsOneWidget);
+    expect(find.textContaining('fits your 1,890 limit · 🥦 Veg'), findsOneWidget);
     final planned = store.c.planFor('2026-09-26', 'breakfast')!;
     await tester.ensureVisible(find.text('✓ I ate this').first);
     await tester.pumpAndSettle();
@@ -148,27 +144,28 @@ void main() {
     await tester.tap(find.text('Start tracking'));
     await settle(tester);
     expect(store.c.baseTarget, 1590);
-    await tester.ensureVisible(find.text('Yoga'));
+    await tester.ensureVisible(find.text('+ Add a workout'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('+ Add a workout'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Yoga'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.textContaining('45 min'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('45 min'));
     await settle(tester);
     expect(store.c.burntOn('2026-09-26'), 92);
     expect(store.c.dailyTarget('2026-09-26'), 1682);
-    await tester.ensureVisible(find.textContaining('Added to today’s food limit'));
-    expect(find.text('Added to today’s food limit: 1,590 + 92 = 1,682 kcal. Estimates from your weight (82 kg).'), findsOneWidget);
+    await tester.ensureVisible(find.text('How calories burnt are counted'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('How calories burnt are counted'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Added to today’s food limit: 1,590 + 92 = 1,682 kcal.'), findsOneWidget);
   });
 
   testWidgets('choices change only from Me, each on its own', (tester) async {
     final store = await start(tester, data: ready());
     await tester.tap(find.text('Me'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Change').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Change').first);
+    await tester.tap(find.text('I eat'));
     await tester.pumpAndSettle();
     expect(find.text('What do you eat?'), findsOneWidget);
     await tester.tap(find.text('Non-vegetarian'));
@@ -211,6 +208,32 @@ void _smallPhoneTest(String theme) {
     for (final tab in ['Diet', 'Move', 'Progress', 'Me', 'Today']) {
       await tester.tap(find.text(tab).last);
       await tester.pumpAndSettle();
+      // Open everything that folds, so it gets laid out too.
+      for (final t in const ['How plans are made', 'How calories burnt are counted', 'Settings', 'More details']) {
+        if (find.text(t).evaluate().isNotEmpty) {
+          await tester.ensureVisible(find.text(t));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(t));
+          await tester.pumpAndSettle();
+        }
+      }
+      if (tab == 'Me') {
+        for (final page in const ['Plan and body', 'Meal reminders']) {
+          await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.text(page));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(page));
+          await tester.pumpAndSettle();
+          for (var i = 0; i < 6; i++) {
+            await tester.drag(find.byType(Scrollable).last, const Offset(0, -500));
+            await tester.pump();
+          }
+          await tester.pumpAndSettle();
+          await tester.tap(find.byTooltip('Back'));
+          await tester.pumpAndSettle();
+        }
+      }
       // Scroll through the whole screen so every part gets laid out.
       final list = find.byType(Scrollable).first;
       for (var i = 0; i < 12; i++) {
