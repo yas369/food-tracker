@@ -134,7 +134,53 @@ void main() {
     await tester.tap(find.text('✓ I ate this').first);
     await settle(tester);
     expect(store.d.log['2026-09-26']!.length, planned.items.length);
-    expect(find.text('✓ Logged'), findsOneWidget);
+    expect(find.textContaining('✓ Logged'), findsOneWidget, reason: 'a logged meal shrinks to one line');
+    await tester.tap(find.text('Undo'));
+    await settle(tester);
+    expect(store.d.log['2026-09-26'], isNull, reason: 'undo removes the whole meal');
+  });
+
+  testWidgets('a logged food: tap to change the amount, remove with undo', (tester) async {
+    final d = ready();
+    d.log['2026-09-26'] = [const Entry(f: 'idli', name: 'Idli', unit: '1 piece', kcal: 60, tags: [], qty: 3, meal: 'breakfast', hunger: null, b: 'a', t: 0)];
+    final store = await start(tester, data: d);
+    await tester.tap(find.text('Breakfast'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Idli'));
+    await tester.pumpAndSettle();
+    expect(find.text('180 kcal'), findsOneWidget);
+    await tester.tap(find.byTooltip('Less'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await settle(tester);
+    expect(store.d.log['2026-09-26']!.single.qty, 2);
+    await tester.pump(const Duration(seconds: 6)); // the message closes by itself
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Remove Idli'));
+    await settle(tester);
+    expect(store.d.log['2026-09-26'], isNull);
+    await tester.tap(find.text('Undo'));
+    await settle(tester);
+    expect(store.d.log['2026-09-26']!.single.qty, 2);
+  });
+
+  testWidgets('mornings show how yesterday went; swipe to see a past day', (tester) async {
+    final d = ready();
+    d.log['2026-09-25'] = [const Entry(f: 'rice', name: 'White rice', unit: '1 cup', kcal: 200, tags: [], qty: 7, meal: 'lunch', hunger: null, b: 'a', t: 0)];
+    await start(tester, data: d, at: DateTime(2026, 9, 26, 8, 0));
+    expect(find.textContaining('Yesterday: 1,400 of 1,890. Within your limit.'), findsOneWidget);
+    await tester.fling(find.text('kcal left'), const Offset(300, 0), 1500);
+    await tester.pumpAndSettle();
+    expect(find.text('Yesterday'), findsOneWidget, reason: 'swiped back a day');
+    expect(find.text('1 item · 1,400 kcal'), findsOneWidget);
+  });
+
+  testWidgets('progress waits for 3 days of logging before showing charts', (tester) async {
+    await start(tester, data: ready());
+    await tester.tap(find.text('Progress'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your patterns show up here after 3 days of logging'), findsOneWidget);
+    expect(find.text('Last 14 days'), findsNothing);
   });
 
   testWidgets('move: workouts add to the day’s limit', (tester) async {
@@ -187,8 +233,10 @@ void main() {
   });
 }
 
-void _smallPhoneTest(String theme) {
-  testWidgets('every screen fits a small phone ($theme theme)', (tester) async {
+void _smallPhoneTest(String theme, {double textScale = 1}) {
+  testWidgets('every screen fits a small phone ($theme theme, text ×$textScale)', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     final d = ready()..settings.theme = theme;
     d.move
       ..on = true
@@ -198,6 +246,9 @@ void _smallPhoneTest(String theme) {
       const Entry(f: 'idli', name: 'Idli', unit: '1 piece', kcal: 60, tags: [], qty: 3, meal: 'breakfast', hunger: 4, b: 'a', t: 0),
       const Entry(f: 'chkbiryani', name: 'Chicken biryani', unit: '1 plate', kcal: 550, tags: ['protein'], qty: 2, meal: 'lunch', hunger: 1, b: 'b', t: 0),
     ];
+    for (final day in ['2026-09-24', '2026-09-25']) {
+      d.log[day] = [const Entry(f: 'dosa', name: 'Plain dosa', unit: '1 dosa', kcal: 135, tags: [], qty: 3, meal: 'breakfast', hunger: 4, b: 'c', t: 0)];
+    }
     tester.view.physicalSize = const Size(1080, 2220);
     tester.view.devicePixelRatio = 3; // 360 × 740
     addTearDown(tester.view.reset);
@@ -221,7 +272,7 @@ void _smallPhoneTest(String theme) {
         for (final page in const ['Plan and body', 'Meal reminders']) {
           await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
           await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text(page));
+          await tester.scrollUntilVisible(find.text(page), 200, scrollable: find.byType(Scrollable).first);
           await tester.pumpAndSettle();
           await tester.tap(find.text(page));
           await tester.pumpAndSettle();
@@ -260,4 +311,6 @@ void _smallPhoneTest(String theme) {
 void smallPhoneTests() {
   _smallPhoneTest('light');
   _smallPhoneTest('dark');
+  // Android's "Font size" setting at its larger steps.
+  _smallPhoneTest('light', textScale: 1.3);
 }

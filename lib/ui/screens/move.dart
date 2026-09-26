@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../store.dart';
+import '../feedback.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -119,7 +120,14 @@ class _MoveScreenState extends State<MoveScreen> {
               gap12,
               Expanded(child: Text('${workoutInfo(list[i].id)?.title ?? list[i].id} · ${list[i].min} min')),
               Text('${fmt(c.workoutKcal(list[i]))} kcal', style: const TextStyle(fontWeight: FontWeight.w600)),
-              IconButton(tooltip: 'Remove', icon: Icon(Icons.close, size: 18, color: p.muted), onPressed: () => store.removeWorkout(i)),
+              IconButton(
+                tooltip: 'Remove',
+                icon: Icon(Icons.close, size: 18, color: p.muted),
+                onPressed: () {
+                  final w = store.removeWorkout(i);
+                  if (w != null) showUndo(context, 'Removed ${workoutInfo(w.id)?.title ?? 'workout'}', () => store.restoreWorkout(i, w));
+                },
+              ),
             ]),
           gap12,
           SoftButton('+ Add a workout', onPressed: _addWorkout),
@@ -127,7 +135,7 @@ class _MoveScreenState extends State<MoveScreen> {
       ),
       AppCard(
         child: Column(children: [
-          SectionTitle('This week', trailing: '${fmt(days.fold(0, (a, d) => a + c.burntOn(d)))} kcal burnt'),
+          SectionTitle('Steps this week', trailing: '${fmt(days.fold(0, (a, d) => a + c.stepsOn(d)))} steps'),
           DayBars(
             values: [for (final d in days) c.stepsOn(d)],
             labels: [for (final d in days) weekdayLetter(d)],

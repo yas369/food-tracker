@@ -16,8 +16,11 @@ leaves the phone.
   set your own number.
 - **Quick-pick Indian foods.** About 80 common South Indian and Indian items
   as a shop-style grid: tap ADD, adjust with − / +, then add everything from
-  the green bar at the bottom. Recent foods come first, and you can add your
-  own.
+  the green bar at the bottom. Your five most recent foods come first as a
+  short list, and you can add your own.
+- **Easy to correct.** Every log and every removal shows *Undo* for a few
+  seconds. Tap a logged food on Today to change how much you ate. Swipe
+  Today left or right to move between days.
 - **Every food labelled low, medium or high.** Per portion: up to 100 kcal is
   low, 101–250 medium, over 250 high. On the Low plan (or when a meal would
   take you over), a high-calorie pick offers a lighter swap, like chapati for
@@ -36,7 +39,8 @@ leaves the phone.
   grows with what you burn, so nothing is counted twice.
 - **Progress.** Streak and weekly stats, a 14-day chart against your limit, a
   donut of calories from low / medium / high foods, a split by meal, and
-  plain-language insights.
+  plain-language insights. Charts appear after three days of logging; each
+  morning, Today says in one line how yesterday went.
 
 ## Install on your Android phone
 

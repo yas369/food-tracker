@@ -52,6 +52,37 @@ class ProgressScreen extends StatelessWidget {
           ]),
         );
 
+    final tip = AppCard(
+      color: p.greenSoft,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Tip of the day', style: TextStyle(fontWeight: FontWeight.w700)),
+        gap4,
+        Text(tips[dayNum(today) % tips.length], style: const TextStyle(fontSize: 14, height: 1.45)),
+      ]),
+    );
+
+    // Charts of one or two days look broken, so the first days get a note instead.
+    final logged = days.where((d) => c.entriesOn(d).isNotEmpty).length;
+    if (logged < 3) {
+      return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 120), children: [
+        AppCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('🌱', style: TextStyle(fontSize: 36)),
+            gap8,
+            const Text('Your patterns show up here after 3 days of logging', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, height: 1.3)),
+            gap8,
+            Muted('$logged of 3 days so far. Log every day, even the days you overeat: those are the ones that show what to change.', size: 14),
+            gap12,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(value: logged / 3, minHeight: 8, backgroundColor: p.surface2, color: p.green),
+            ),
+          ]),
+        ),
+        tip,
+      ]);
+    }
+
     return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 120), children: [
       AppCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -134,14 +165,7 @@ class ProgressScreen extends StatelessWidget {
           for (final x in insights.skip(2)) insight(x),
         ],
       ),
-      AppCard(
-        color: p.greenSoft,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Tip of the day', style: TextStyle(fontWeight: FontWeight.w700)),
-          gap4,
-          Text(tips[dayNum(today) % tips.length], style: const TextStyle(fontSize: 14, height: 1.45)),
-        ]),
-      ),
+      tip,
     ]);
   }
 

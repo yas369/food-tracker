@@ -7,6 +7,7 @@ import '../../data/catalog.dart';
 import '../../logic.dart';
 import '../../models.dart';
 import '../../store.dart';
+import '../feedback.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'add_food.dart';
@@ -34,8 +35,9 @@ class _TodayScreenState extends State<TodayScreen> {
     final entries = c.entriesOn(day);
     final target = c.dailyTarget(day);
     final nudge = isToday ? _topNudge(entries) : null;
-    return ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 120), children: [
+    final list = ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 120), children: [
       _Summary(store: store, day: day, onDay: widget.onDay),
+      if (isToday && target > 0 && store.now.hour < 12) _Yesterday(store: store),
       if (target <= 0)
         AppCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -48,6 +50,15 @@ class _TodayScreenState extends State<TodayScreen> {
       if (nudge != null) _Nudge(emoji: nudge.$1, text: nudge.$2),
       _MealList(store: store, day: day, open: open, onToggle: (m) => setState(() => open = open == m ? null : m)),
     ]);
+    // Swipe right for the day before, left for the day after.
+    return GestureDetector(
+      onHorizontalDragEnd: (e) {
+        final v = e.primaryVelocity ?? 0;
+        if (v > 300) widget.onDay(addDays(day, -1));
+        if (v < -300 && !isToday) widget.onDay(addDays(day, 1));
+      },
+      child: list,
+    );
   }
 
   /// At most one nudge: the one that matters most right now.
@@ -111,7 +122,7 @@ class _Summary extends StatelessWidget {
             ),
           ),
           gap8,
-          Text('${fmt(total)} eaten of ${fmt(target)}${burnt > 0 ? ' · includes +${fmt(burnt)} from moving' : ''}',
+          Text('${fmt(total)} eaten of ${fmt(target)}${burnt > 0 ? ' · ${fmt(c.baseTarget)} + ${fmt(burnt)} from moving' : ''}',
               style: const TextStyle(color: Colors.white70, fontSize: 13)),
         ],
       ]),
@@ -172,13 +183,44 @@ class _NextUp extends StatelessWidget {
             Expanded(
               child: GoButton('I ate this', onPressed: () {
                 final k = store.logPlan(meal.id);
-                if (k != null) toast(context, '${meal.label} logged ✅ ${fmt(k)} kcal');
+                final b = store.lastBatch;
+                if (k != null && b != null) showUndo(context, '${meal.label} logged · ${fmt(k)} kcal', () => store.removeBatch(store.today, b), buzz: true);
               }),
             ),
             gap8,
           ],
           Expanded(child: SoftButton(plan == null ? 'Log a meal' : 'Something else', onPressed: () => openAddFood(context, store, store.today, meal: meal.id))),
         ]),
+      ]),
+    );
+  }
+}
+
+/// One calm line in the morning about how yesterday went.
+class _Yesterday extends StatelessWidget {
+  const _Yesterday({required this.store});
+  final AppStore store;
+  @override
+  Widget build(BuildContext context) {
+    final c = store.c;
+    final y = addDays(store.today, -1);
+    final entries = c.entriesOn(y);
+    if (entries.isEmpty) return const SizedBox.shrink();
+    final total = sumKcal(entries);
+    final target = c.dailyTarget(y);
+    final over = total - target;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(over > 0 ? '🌅' : '👏', style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+              over > 0
+                  ? 'Yesterday: ${fmt(total)} of ${fmt(target)}, ${fmt(over)} over. Today is a fresh start.'
+                  : 'Yesterday: ${fmt(total)} of ${fmt(target)}. Within your limit.',
+              style: TextStyle(fontSize: 14, color: Pal.of(context).muted)),
+        ),
       ]),
     );
   }
@@ -260,25 +302,78 @@ class _EntryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = store.c.entriesOn(day)[index];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(52, 0, 4, 4),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(e.name, style: const TextStyle(fontSize: 14)),
-            Muted(qtyUnit(e.qty, e.unit), size: 12),
-          ]),
-        ),
-        Text(fmt(e.total), style: const TextStyle(fontWeight: FontWeight.w600)),
-        IconButton(
-          tooltip: 'Remove ${e.name}',
-          icon: Icon(Icons.close, size: 18, color: Pal.of(context).muted),
-          onPressed: () {
-            final removed = store.removeEntry(day, index);
-            toast(context, 'Removed ${removed.name}');
-          },
-        ),
-      ]),
+    return InkWell(
+      onTap: () => _editEntry(context, store, day, index),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(52, 0, 4, 4),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(e.name, style: const TextStyle(fontSize: 14)),
+              Muted(qtyUnit(e.qty, e.unit), size: 12),
+            ]),
+          ),
+          Text(fmt(e.total), style: const TextStyle(fontWeight: FontWeight.w600)),
+          IconButton(
+            tooltip: 'Remove ${e.name}',
+            icon: Icon(Icons.close, size: 18, color: Pal.of(context).muted),
+            onPressed: () => _remove(context, store, day, index),
+          ),
+        ]),
+      ),
     );
   }
+}
+
+void _remove(BuildContext context, AppStore store, String day, int index) {
+  final removed = store.removeEntry(day, index);
+  showUndo(context, 'Removed ${removed.name}', () => store.restoreEntry(day, index, removed));
+}
+
+/// Change how much of a logged food was eaten, or remove it.
+Future<void> _editEntry(BuildContext context, AppStore store, String day, int index) {
+  final e = store.c.entriesOn(day)[index];
+  final food = store.c.food(e.f);
+  final step = food == null ? 0.5 : stepFor(food);
+  var qty = e.qty;
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(e.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Muted('${e.unit} · ${e.kcal} kcal each'),
+            gap16,
+            Row(children: [
+              Expanded(child: Text('${fmt(e.kcal * qty)} kcal', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800))),
+              IconButton.filledTonal(tooltip: 'Less', onPressed: qty > step ? () => setSheet(() => qty -= step) : null, icon: const Icon(Icons.remove)),
+              SizedBox(width: 56, child: Text(fmtQty(qty), textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+              IconButton.filledTonal(tooltip: 'More', onPressed: qty < 50 ? () => setSheet(() => qty += step) : null, icon: const Icon(Icons.add)),
+            ]),
+            gap16,
+            Row(children: [
+              Expanded(
+                child: SoftButton('Remove', onPressed: () {
+                  Navigator.pop(ctx);
+                  _remove(context, store, day, index);
+                }),
+              ),
+              gap8,
+              Expanded(
+                child: GoButton('Save', onPressed: () {
+                  Navigator.pop(ctx);
+                  if (qty == e.qty) return;
+                  store.setEntryQty(day, index, qty);
+                  showUndo(context, '${e.name}: ${qtyUnit(qty, e.unit)}', () => store.setEntryQty(day, index, e.qty));
+                }),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    ),
+  );
 }
