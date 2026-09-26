@@ -19,32 +19,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 17
           cache: gradle
 
-      - name: Install Capacitor
-        run: npm ci
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
 
-      - name: Check the bundled Capacitor runtime matches the installed one
-        run: cmp node_modules/@capacitor/core/dist/capacitor.js www/capacitor.js
+      - name: Get packages
+        run: flutter pub get
 
-      - name: Copy the web app into the Android project
-        run: npx cap sync android
+      - name: Analyze
+        run: flutter analyze
 
+      - name: Test
+        run: flutter test
+
+      # The build number keeps rising past the earlier (web-based) version's,
+      # so this installs over it as an update and keeps its data.
       - name: Build APK
-        working-directory: android
-        run: ./gradlew assembleRelease -PversionCode=${{ github.run_number }} --no-daemon --stacktrace
+        run: flutter build apk --release --build-number=$((1000 + ${{ github.run_number }})) --build-name=2.0.${{ github.run_number }}
 
       - name: Name the APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk plate-check.apk
+        run: cp build/app/outputs/flutter-apk/app-release.apk plate-check.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -58,7 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v1.0.${{ github.run_number }}" plate-check.apk \
-            --title "Plate Check 1.0.${{ github.run_number }}" \
+          gh release create "v2.0.${{ github.run_number }}" plate-check.apk \
+            --title "Plate Check 2.0.${{ github.run_number }}" \
             --notes "Install on Android: open this page on your phone, tap plate-check.apk, then allow installing from your browser if asked. Updates install over the previous version and keep your data." \
             --latest
