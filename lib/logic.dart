@@ -201,7 +201,11 @@ class Calc {
 
   List<Workout> workoutsOn(String k) => d.move.workouts[k] ?? const [];
   int burntOn(String k) => (stepKcal(k) + workoutsOn(k).fold(0.0, (a, w) => a + workoutKcal(w))).round();
-  double kmOf(double steps) => steps * (d.profile?.height ?? 165) * 0.00415 / 1000;
+  /// Centimetres per step: your measured stride if you've walked a known
+  /// distance, otherwise the usual walking estimate of 41.5% of your height.
+  double get strideCm => d.move.stride ?? (d.profile?.height ?? 165) * 0.415;
+  bool get strideMeasured => d.move.stride != null;
+  double kmOf(double steps) => steps * strideCm / 100000;
 
   // Kitchen and diet plan
   Set<String> get pantry => {...(d.pantry ?? defaultPantry)};
@@ -410,4 +414,12 @@ void recordSteps(Move mv, double c, int boot, int at, String today) {
   // as a new starting point.
   final cutoff = addDays(today, -60);
   mv.days.removeWhere((k, _) => k.compareTo(cutoff) < 0);
+}
+
+/// Stride in cm from a walk of [metres] that took [steps], or null if the
+/// walk was too short to trust or the result isn't a human walking stride.
+double? strideFrom(double metres, int steps) {
+  if (metres < 20 || steps < 30) return null;
+  final cm = metres * 100 / steps;
+  return cm >= 30 && cm <= 150 ? cm : null;
 }

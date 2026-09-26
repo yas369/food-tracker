@@ -10,6 +10,7 @@ import '../feedback.dart';
 import '../icons.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'stride.dart';
 
 class MoveScreen extends StatefulWidget {
   const MoveScreen({super.key, required this.store});
@@ -175,6 +176,8 @@ class _MoveScreenState extends State<MoveScreen> {
           Muted(c.moveCredit
               ? 'Added to today’s food limit: ${fmt(c.baseTarget)} + ${fmt(burnt)} = ${fmt(c.dailyTarget(k))} kcal. Estimates from your weight (${fmtQty(c.bodyKg)} kg). The first ${fmt(Calc.baseSteps)} steps are everyday moving about, already in your limit.'
               : 'Not added to your food limit (switch it on in Settings below). Estimates from your weight (${fmtQty(c.bodyKg)} kg).'),
+          gap8,
+          Muted('Distance is steps × your stride of ${fmt(c.strideCm)} cm${c.strideMeasured ? ', as you measured it' : ', estimated from your height. Measure it in Settings below for a truer distance'}. Distance doesn’t change calories burnt; steps do.'),
           if (sensor.supported && mv.on) ...[
             gap8,
             const Muted('Steps come from your phone’s step sensor. On some phones it only counts reliably if you open Plate Check about once a day.'),
@@ -187,6 +190,16 @@ class _MoveScreenState extends State<MoveScreen> {
           Row(children: [
             const Expanded(child: Text('Daily step goal')),
             SizedBox(width: 150, child: NumberStepper(value: goal.toDouble(), step: 500, min: 1000, max: 30000, label: 'step goal', onChanged: (v) => store.setStepGoal(v.round()))),
+          ]),
+          gap8,
+          Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Stride length'),
+                Muted('${fmt(c.strideCm)} cm · ${c.strideMeasured ? 'measured' : 'estimated from your height'}', size: 13),
+              ]),
+            ),
+            TextButton(onPressed: () => openStride(context, store), child: Text(c.strideMeasured ? 'Measure again' : 'Measure')),
           ]),
           gap8,
           SwitchListTile(
