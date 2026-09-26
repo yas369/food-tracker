@@ -1,0 +1,240 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:platecheck/main.dart';
+import 'package:platecheck/models.dart';
+import 'package:platecheck/store.dart';
+
+import 'fakes.dart';
+
+Future<AppStore> start(WidgetTester tester, {AppData? data, DateTime? at}) async {
+  tester.view.physicalSize = const Size(1170, 2532);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  final now = at ?? DateTime(2026, 9, 26, 13, 10);
+  final store = AppStore(
+    storage: MemoryStorage(data == null ? null : jsonEncode(data.toJson())),
+    notifications: FakeNotifications(),
+    steps: FakeSteps(),
+    clock: () => now,
+  );
+  await tester.pumpWidget(PlateCheckApp(store: store));
+  await store.init();
+  await tester.pumpAndSettle();
+  return store;
+}
+
+AppData ready({bool withLog = false}) {
+  final d = AppData(profile: Profile(age: 32, sex: 'm', height: 172, weight: 82, activity: 1.375, plan: 'low'));
+  d.me
+    ..name = 'Yaswanth C'
+    ..onboarded = true
+    ..since = DateTime(2026, 9, 1).millisecondsSinceEpoch;
+  return d;
+}
+
+Future<void> settle(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.pump(const Duration(seconds: 1)); // let the reminder re-plan run
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  smallPhoneTests();
+  testWidgets('first run: three setup screens, then the goal, then Today', (tester) async {
+    final store = await start(tester);
+    expect(find.text('Welcome! 👋'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome! 👋'), findsOneWidget, reason: 'a name is needed');
+    await tester.enterText(find.byType(TextField), 'Yaswanth C');
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('What do you eat?'), findsOneWidget);
+    await tester.tap(find.text('Eggetarian'));
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('What’s in your kitchen?'), findsOneWidget);
+    await tester.tap(find.text('Done, let’s go'));
+    await tester.pumpAndSettle();
+    expect(store.d.me.onboarded, isTrue);
+    expect(store.d.settings.dietPref, 'egg');
+    expect(find.text('Me'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Save and start tracking'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Save and start tracking'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save and start tracking'));
+    await settle(tester);
+    // Defaults (30 y, 165 cm, 70 kg, light activity) on the low plan.
+    expect(store.c.baseTarget, 1680);
+    expect(find.text('Good afternoon, Yaswanth 👋'), findsOneWidget);
+    // Never asked again
+    expect(find.text('Welcome! 👋'), findsNothing);
+  });
+
+  testWidgets('lunch at lunchtime skips the hunger check; logging updates the day', (tester) async {
+    final store = await start(tester, data: ready());
+    expect(find.text('Welcome! 👋'), findsNothing);
+    await tester.tap(find.text('Add food'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add to Lunch'), findsOneWidget);
+    expect(find.text('How hungry are you right now?'), findsNothing);
+    await tester.enterText(find.byType(TextField).first, 'biryani');
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel(RegExp('^Add Chicken biryani')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Make it ½'), findsOneWidget, reason: 'high-calorie pick on the low plan');
+    await tester.tap(find.text('Make it ½'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 item · 275 kcal'), findsOneWidget);
+    await tester.tap(find.textContaining('Add to Lunch ›'));
+    await settle(tester);
+    expect(store.d.log['2026-09-26']!.single.qty, 0.5);
+    expect(find.text('275'), findsWidgets);
+  });
+
+  testWidgets('a snack asks how hungry you are, and "not hungry" offers a wait', (tester) async {
+    final store = await start(tester, data: ready());
+    await tester.ensureVisible(find.text('+ ADD').at(2)); // Snacks
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('+ ADD').at(2));
+    await tester.pumpAndSettle();
+    expect(find.text('Before you eat'), findsOneWidget);
+    await tester.tap(find.text('Not hungry'));
+    await tester.pumpAndSettle();
+    expect(find.text('You’re not really hungry'), findsOneWidget);
+    await tester.tap(find.text('💧 Wait 10 minutes'));
+    await settle(tester);
+    final n = store.notifications as FakeNotifications;
+    expect(n.once.single.$2, DateTime(2026, 9, 26, 13, 20));
+  });
+
+  testWidgets('parotta on the low plan offers chapati instead', (tester) async {
+    final store = await start(tester, data: ready());
+    await tester.tap(find.text('Add food'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'parotta');
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel(RegExp('^Add Parotta')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Lighter swap: Chapati'), findsOneWidget);
+    await tester.tap(find.text('Swap'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Add to Lunch ›'));
+    await settle(tester);
+    expect(store.d.log['2026-09-26']!.single.f, 'chapati');
+  });
+
+  testWidgets('diet plan: sized to the limit, one tap to log, choice shown from profile', (tester) async {
+    final store = await start(tester, data: ready());
+    await tester.tap(find.text('Diet'));
+    await tester.pumpAndSettle();
+    expect(find.text('🥦 Veg · from your profile'), findsOneWidget);
+    expect(find.text('Change in Me'), findsOneWidget);
+    final planned = store.c.planFor('2026-09-26', 'breakfast')!;
+    await tester.ensureVisible(find.text('✓ I ate this').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('✓ I ate this').first);
+    await settle(tester);
+    expect(store.d.log['2026-09-26']!.length, planned.items.length);
+    expect(find.text('✓ Logged'), findsOneWidget);
+  });
+
+  testWidgets('move: workouts add to the day’s limit', (tester) async {
+    final store = await start(tester, data: ready());
+    await tester.tap(find.text('Move'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start tracking'));
+    await settle(tester);
+    expect(store.c.baseTarget, 1590);
+    await tester.ensureVisible(find.text('Yoga'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Yoga'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('45 min'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('45 min'));
+    await settle(tester);
+    expect(store.c.burntOn('2026-09-26'), 92);
+    expect(store.c.dailyTarget('2026-09-26'), 1682);
+    await tester.ensureVisible(find.textContaining('Added to today’s food limit'));
+    expect(find.text('Added to today’s food limit: 1,590 + 92 = 1,682 kcal. Estimates from your weight (82 kg).'), findsOneWidget);
+  });
+
+  testWidgets('choices change only from Me, each on its own', (tester) async {
+    final store = await start(tester, data: ready());
+    await tester.tap(find.text('Me'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Change').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change').first);
+    await tester.pumpAndSettle();
+    expect(find.text('What do you eat?'), findsOneWidget);
+    await tester.tap(find.text('Non-vegetarian'));
+    await tester.tap(find.text('Save'));
+    await settle(tester);
+    expect(store.d.settings.dietPref, 'nonveg');
+    expect(store.d.me.name, 'Yaswanth C');
+    expect(store.d.pantry, isNull, reason: 'kitchen untouched');
+  });
+
+  testWidgets('reminders are planned for 14 days and a logged meal drops its own', (tester) async {
+    final store = await start(tester, data: ready(), at: DateTime(2026, 9, 26, 9, 0));
+    final n = store.notifications as FakeNotifications;
+    expect(n.scheduled.where((r) => r.id == 202609261).length, 1);
+    expect(store.logPlan('lunch'), isNotNull);
+    await settle(tester);
+    expect(n.scheduled.where((r) => r.id == 202609261), isEmpty);
+    expect(n.scheduled.where((r) => r.id == 202609271).length, 1);
+  });
+}
+
+void _smallPhoneTest(String theme) {
+  testWidgets('every screen fits a small phone ($theme theme)', (tester) async {
+    final d = ready()..settings.theme = theme;
+    d.move
+      ..on = true
+      ..manual['2026-09-26'] = 9000;
+    d.move.workouts['2026-09-26'] = [const Workout('yoga', 45, 0)];
+    d.log['2026-09-26'] = [
+      const Entry(f: 'idli', name: 'Idli', unit: '1 piece', kcal: 60, tags: [], qty: 3, meal: 'breakfast', hunger: 4, b: 'a', t: 0),
+      const Entry(f: 'chkbiryani', name: 'Chicken biryani', unit: '1 plate', kcal: 550, tags: ['protein'], qty: 2, meal: 'lunch', hunger: 1, b: 'b', t: 0),
+    ];
+    tester.view.physicalSize = const Size(1080, 2220);
+    tester.view.devicePixelRatio = 3; // 360 × 740
+    addTearDown(tester.view.reset);
+    final store = AppStore(storage: MemoryStorage(jsonEncode(d.toJson())), notifications: FakeNotifications(), steps: FakeSteps(), clock: () => DateTime(2026, 9, 26, 16, 40));
+    await tester.pumpWidget(PlateCheckApp(store: store));
+    await store.init();
+    await tester.pumpAndSettle();
+    for (final tab in ['Diet', 'Move', 'Progress', 'Me', 'Today']) {
+      await tester.tap(find.text(tab).last);
+      await tester.pumpAndSettle();
+      // Scroll through the whole screen so every part gets laid out.
+      final list = find.byType(Scrollable).first;
+      for (var i = 0; i < 12; i++) {
+        await tester.drag(list, const Offset(0, -500));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('Add food'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Very hungry'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel(RegExp('^Add Idli')).first);
+    await tester.pumpAndSettle();
+    final list = find.byType(Scrollable).last;
+    for (var i = 0; i < 10; i++) {
+      await tester.drag(list, const Offset(0, -600));
+      await tester.pump();
+    }
+    await tester.pump(const Duration(seconds: 1));
+  });
+}
+
+void smallPhoneTests() {
+  _smallPhoneTest('light');
+  _smallPhoneTest('dark');
+}
