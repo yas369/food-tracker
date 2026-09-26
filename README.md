@@ -22,6 +22,18 @@ account, no server, and no data leaves the phone.
   *I ate this* logs the whole meal in one tap. Empty meals on Today show the
   plan's suggestion too. A plate guide shows the half vegetables / quarter
   grains / quarter protein split (ICMR-NIN "My Plate for the Day").
+- **Yours.** A three-screen first run: your name and photo, what you eat
+  (veg, egg, non-veg), and what's in your kitchen (a typical kitchen is ticked
+  already). The app greets you by name; the photo is cropped to 256 px and
+  stored on the phone.
+- **Plans from your kitchen.** The diet plan only uses what you have: no
+  batter means no idli, and fruit, nuts and vegetables are named from your
+  kitchen ("Poriyal (beans, carrot)").
+- **Move.** Steps from the phone's step sensor (Android app), workouts added
+  in two taps (yoga, surya namaskar, walk, cycling…), and calories burnt from
+  MET values: (MET − 1) × kg × hours, and 0.0004 kcal × kg per step above
+  2,500 a day. With "add calories I burn" on, the limit starts from a
+  desk-job baseline and grows with what you burn, so nothing is counted twice.
 - **Quick-pick Indian foods.** About 80 common South Indian and Indian items
   (idli, dosa, sambar, biryani, sundal, filter coffee…) as a shop-style grid:
   tap ADD, adjust with − / +, then add everything from the green bar at the bottom.
@@ -69,8 +81,11 @@ and notifications while open.
 
 ## Data
 
-Everything lives on the phone, in the app's own storage. Nothing is sent
-anywhere. Uninstalling or clearing the app's data erases it, so use Settings →
+Everything lives on the phone. In the Android app every save goes to
+localStorage *and* to a file in the app's private storage
+(`plate-check-state.json`), which Android's own backup covers. On start the
+newer copy wins, so a WebView storage wipe doesn't lose your log. Nothing is
+sent anywhere. Uninstalling or clearing the app's data erases it, so use Settings →
 *Export backup* (it opens the share sheet, so you can save it to Drive or send it
 to yourself). *Import backup* restores it.
 
