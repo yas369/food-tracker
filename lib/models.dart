@@ -211,7 +211,8 @@ class Move {
   Map<String, double> days; // steps counted by the phone, per day
   Map<String, int> manual; // steps typed in from a watch
   Map<String, List<Workout>> workouts;
-  Move({this.on = false, this.credit = true, this.goal = 7000, this.last, Map<String, double>? days, Map<String, int>? manual, Map<String, List<Workout>>? workouts})
+  double? stride; // cm per step, measured by walking a known distance; null: estimated from height
+  Move({this.on = false, this.credit = true, this.goal = 7000, this.last, Map<String, double>? days, Map<String, int>? manual, Map<String, List<Workout>>? workouts, this.stride})
       : days = days ?? {},
         manual = manual ?? {},
         workouts = workouts ?? {};
@@ -224,12 +225,14 @@ class Move {
         days: {for (final e in _m(j['days']).entries) e.key: _d(e.value)},
         manual: {for (final e in _m(j['manual']).entries) e.key: _i(e.value)},
         workouts: {for (final e in _m(j['workouts']).entries) e.key: [for (final w in _l(e.value)) Workout.fromJson(_m(w))]},
+        stride: j['stride'] == null ? null : _d(j['stride']),
       );
 
   Map<String, dynamic> toJson() => {
         'on': on, 'credit': credit, 'goal': goal, 'last': last?.toJson(),
         'days': days, 'manual': manual,
         'workouts': {for (final e in workouts.entries) e.key: [for (final w in e.value) w.toJson()]},
+        'stride': stride,
       };
 }
 

@@ -254,6 +254,12 @@ class AppStore extends ChangeNotifier {
     save();
   }
 
+  /// A measured stride in cm, or null to go back to the estimate from height.
+  void setStride(double? cm) {
+    d.move.stride = cm;
+    save(reminders: false);
+  }
+
   void setStepGoal(int g) {
     d.move.goal = g.clamp(1000, 30000);
     save(reminders: false);

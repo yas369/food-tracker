@@ -72,6 +72,21 @@ Future<void> comeBack(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Scroll the screen's list until [f] is built and on screen.
+Future<void> reach(WidgetTester tester, Finder f) async {
+  await tester.scrollUntilVisible(f, 200, scrollable: find.byType(Scrollable).first);
+  await tester.pumpAndSettle();
+}
+
+Future<void> openStridePage(WidgetTester tester) async {
+  await reach(tester, find.text('Settings'));
+  await tester.tap(find.text('Settings'));
+  await tester.pumpAndSettle();
+  await reach(tester, find.text('Measure'));
+  await tester.tap(find.text('Measure'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('allowing the permission in Android settings starts counting when you come back', (tester) async {
     final (store, s) = await open(tester, PermissionStatus.denied);
@@ -117,5 +132,46 @@ void main() {
     s.stream!.addError(Exception('StepCount not available'));
     await tester.pumpAndSettle();
     expect(find.textContaining('This phone has no step sensor'), findsOneWidget);
+  });
+
+  testWidgets('measure your stride: the phone counts the steps of a known walk', (tester) async {
+    final (store, s) = await open(tester, PermissionStatus.granted);
+    await reading(tester, s, 1000);
+    await openStridePage(tester);
+    expect(find.text('Measure your stride'), findsOneWidget);
+
+    await tester.tap(find.text('Start counting'));
+    await tester.pumpAndSettle();
+    await reading(tester, s, 1070);
+    expect(find.text('70'), findsOneWidget, reason: 'the count moves as you walk');
+    await reading(tester, s, 1140);
+    await tester.tap(find.text('Stop'));
+    await tester.pumpAndSettle();
+    await reading(tester, s, 1150); // steps after Stop don't count
+    await reach(tester, find.textContaining('Your stride: 71 cm a step'));
+
+    await reach(tester, find.text('Save my stride'));
+    await tester.tap(find.text('Save my stride'));
+    await tester.pumpAndSettle();
+    expect(store.d.move.stride, closeTo(71.43, .01));
+    expect(store.c.strideMeasured, isTrue);
+    await reach(tester, find.textContaining('71 cm · measured'));
+  });
+
+  testWidgets('measure your stride by typing in steps you counted', (tester) async {
+    final (store, _) = await open(tester, PermissionStatus.denied);
+    await openStridePage(tester);
+    expect(find.text('Start counting'), findsNothing, reason: 'no sensor access, so counting is by hand');
+    await tester.enterText(find.widgetWithText(TextField, 'Distance'), '400');
+    await tester.enterText(find.widgetWithText(TextField, 'Steps'), '100');
+    await tester.pumpAndSettle();
+    await reach(tester, find.textContaining('doesn’t look right')); // 4 m a step
+    await tester.enterText(find.widgetWithText(TextField, 'Steps'), '520');
+    await tester.pumpAndSettle();
+    await reach(tester, find.textContaining('Your stride: 77 cm a step'));
+    await reach(tester, find.text('Save my stride'));
+    await tester.tap(find.text('Save my stride'));
+    await tester.pumpAndSettle();
+    expect(store.d.move.stride, closeTo(76.92, .01));
   });
 }

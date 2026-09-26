@@ -272,6 +272,32 @@ void _smallPhoneTest(String theme, {double textScale = 1}) {
           await tester.pumpAndSettle();
         }
       }
+      if (tab == 'Move') {
+        // Settings sits below the fold on a small phone, so open it here.
+        Future<void> scrollTo(Finder f) async {
+          for (var i = 0; i < 15 && f.hitTestable().evaluate().isEmpty; i++) {
+            await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));
+            await tester.pumpAndSettle();
+          }
+        }
+
+        await scrollTo(find.text('Settings'));
+        if (find.text('Daily step goal').evaluate().isEmpty) {
+          await tester.tap(find.text('Settings'));
+          await tester.pumpAndSettle();
+        }
+        await scrollTo(find.text('Measure'));
+        await tester.tap(find.text('Measure'));
+        await tester.pumpAndSettle();
+        expect(find.text('Measure your stride'), findsOneWidget);
+        for (var i = 0; i < 4; i++) {
+          await tester.drag(find.byType(Scrollable).last, const Offset(0, -500));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+      }
       if (tab == 'Me') {
         for (final page in const ['Plan and body', 'Meal reminders']) {
           await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));

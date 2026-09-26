@@ -149,4 +149,30 @@ void main() {
     final again = AppData.fromJson(jsonDecode(jsonEncode(d.toJson())));
     expect(jsonEncode(again.toJson()), jsonEncode(d.toJson()));
   });
+
+  group('stride', () {
+    test('distance uses your measured stride, or 41.5% of height', () {
+      final c = Calc(withProfile(height: 172));
+      expect(c.strideCm, closeTo(71.38, .01));
+      expect(c.kmOf(10000), closeTo(7.138, .001));
+      c.d.move.stride = 80;
+      expect(c.strideMeasured, isTrue);
+      expect(c.kmOf(10000), closeTo(8.0, .001));
+    });
+    test('a walk too short, or a stride no one walks, is refused', () {
+      expect(strideFrom(100, 140), closeTo(71.43, .01));
+      expect(strideFrom(400, 520), closeTo(76.92, .01));
+      expect(strideFrom(10, 14), isNull, reason: 'too short to trust');
+      expect(strideFrom(100, 20), isNull, reason: 'fewer than 30 steps');
+      expect(strideFrom(100, 400), isNull, reason: '25 cm a step');
+      expect(strideFrom(1000, 500), isNull, reason: '2 m a step');
+    });
+    test('saved with the rest, and older saves load without one', () {
+      final d = withProfile()..move.stride = 74.5;
+      expect(AppData.fromJson(jsonDecode(jsonEncode(d.toJson()))).move.stride, 74.5);
+      final old = withProfile().toJson();
+      (old['move'] as Map).remove('stride');
+      expect(AppData.fromJson(jsonDecode(jsonEncode(old))).move.stride, isNull);
+    });
+  });
 }

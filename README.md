@@ -96,6 +96,14 @@ permission (after it was refused twice), Move offers *Open settings*. Until the
 first reading arrives, Move says it's waiting for the sensor; if steps typed
 in from a watch are higher than the phone's count, it says that too.
 
+Distance is steps × stride. The app doesn't use GPS or your location. Until
+you measure it, stride is estimated as 41.5% of your height, which is within
+10–15% for most people. *Move → Settings → Stride length → Measure* has you walk
+a distance you know (100 m or more): the phone counts the steps between
+*Start* and *Stop*, or you type in steps you counted, and distance uses your
+real stride from then on. Distance is only shown; calories burnt come from
+steps and workouts.
+
 ## Working on it
 
 ```
