@@ -14,6 +14,14 @@ account, no server, and no data leaves the phone.
   low, 101–250 medium, over 250 high. You can filter by level. On the Low plan
   (or when a meal would take you over), picking a high-calorie food offers a
   lighter swap, like chapati for parotta, or half a portion.
+- **Diet plan: what to eat and how much.** A day of South Indian meals
+  (breakfast, lunch, snack, dinner) for Veg, Egg or Non-veg, with portions
+  sized so the day fits your limit: more idli or rice on a bigger limit, and
+  more dal and vegetables rather than a pile of chapatis. Rounding never takes
+  a meal over its share. Options rotate daily; *Another option* swaps one, and
+  *I ate this* logs the whole meal in one tap. Empty meals on Today show the
+  plan's suggestion too. A plate guide shows the half vegetables / quarter
+  grains / quarter protein split (ICMR-NIN "My Plate for the Day").
 - **Quick-pick Indian foods.** About 80 common South Indian and Indian items
   (idli, dosa, sambar, biryani, sundal, filter coffee…) as a shop-style grid:
   tap ADD, adjust with − / +, then add everything from the green bar at the bottom.

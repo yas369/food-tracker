@@ -407,6 +407,26 @@ label.field > span { display: block; margin-bottom: 4px; color: var(--muted); fo
 .empty-state { text-align: center; padding: 16px 8px; color: var(--muted); }
 .empty-state div { font-size: 44px; }
 
+/* Diet plan */
+.dhero { padding-top: 12px; }
+.dseg { background: rgba(255,255,255,.12); border-radius: 14px; padding: 4px; position: relative; z-index: 1; }
+.dseg button { background: transparent; color: rgba(255,255,255,.85); }
+.dseg button[aria-pressed="true"] { background: #fff; color: var(--brand-deep); }
+.dtotal { margin: 16px 0; position: relative; z-index: 1; }
+.dtotal b { font-size: 36px; font-weight: 900; display: block; line-height: 1.1; }
+.dtotal span { color: rgba(255,255,255,.8); font-size: 14px; }
+.plate-wrap { display: flex; align-items: center; gap: 16px; }
+.plate { width: 116px; height: 116px; flex: none; }
+.plate-legend { display: grid; gap: 10px; flex: 1; min-width: 0; }
+.plate-legend div { display: grid; grid-template-columns: 12px 1fr; column-gap: 8px; font-size: 14px; }
+.plate-legend i { width: 12px; height: 12px; border-radius: 4px; margin-top: 4px; }
+.plate-legend span { grid-column: 2; font-size: 12px; color: var(--muted); }
+.dmeal .meal-title span { color: var(--text); font-weight: 600; font-size: 14px; }
+.dk { font-size: 20px; font-weight: 900; color: var(--brand); text-align: right; }
+.dk small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
+.suggest { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--brand-soft); font-size: 14px; }
+.suggest .grow { flex: 1; min-width: 0; }
+.suggest small { display: block; color: var(--muted); font-size: 12px; }
 .toast {
   position: fixed; left: 50%; bottom: calc(160px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); transform: translateX(-50%) translateY(10px);
   background: var(--brand-deep); color: #fff; padding: 12px 18px; border-radius: 16px; font-size: 14px; font-weight: 600;
@@ -472,6 +492,36 @@ label.field > span { display: block; margin-bottom: 4px; color: var(--muted); fo
       <h2>💡 Why it matters</h2>
       <p id="tipText"></p>
     </div>
+  </section>
+
+  <section class="view" id="view-diet" aria-label="Diet plan">
+    <div class="hero dhero">
+      <div class="seg dseg" id="dietDays" role="group" aria-label="Day"></div>
+      <div class="dtotal"><b class="num" id="dietTotal">–</b><span id="dietSub"></span></div>
+      <div class="seg dseg" id="dietPrefs" role="group" aria-label="Food preference"></div>
+    </div>
+    <div class="card plate-card">
+      <h2>🍽️ How to fill your plate</h2>
+      <div class="plate-wrap">
+        <svg class="plate" viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="56" fill="var(--surface-2)"/>
+          <path d="M60 60 L60 8 A52 52 0 0 1 60 112 Z" fill="#22C55E"/>
+          <path d="M60 60 L60 112 A52 52 0 0 1 8 60 Z" fill="#F59E0B"/>
+          <path d="M60 60 L8 60 A52 52 0 0 1 60 8 Z" fill="#8B2CF5"/>
+          <text x="86" y="64" text-anchor="middle" font-size="18">🥦</text>
+          <text x="36" y="92" text-anchor="middle" font-size="16">🍚</text>
+          <text x="36" y="44" text-anchor="middle" font-size="16">🫘</text>
+        </svg>
+        <div class="plate-legend">
+          <div><i style="background:#22C55E"></i><b>Half: vegetables and fruit</b><span>Poriyal, kootu, salad, fruit</span></div>
+          <div><i style="background:#F59E0B"></i><b>Quarter: grains</b><span>Rice, idli, dosa, chapati</span></div>
+          <div><i style="background:#8B2CF5"></i><b>Quarter: protein</b><span>Dal, sambar, curd, eggs, fish</span></div>
+        </div>
+      </div>
+      <p class="muted small" style="margin:12px 0 0">Based on the "My Plate for the Day" idea in India’s ICMR-NIN dietary guidelines. Drink water with meals, and tea or coffee without sugar.</p>
+    </div>
+    <div id="dietMeals"></div>
+    <p class="muted small">Amounts are sized so the day fits your limit. The limit is a ceiling, not a target: if you’re full on less, stop. This is general guidance, not medical advice. If you have diabetes, kidney or heart disease, are pregnant, or take medicines that interact with food, check with a doctor or dietitian first.</p>
   </section>
 
   <section class="view" id="view-history" aria-label="History">
@@ -603,8 +653,9 @@ label.field > span { display: block; margin-bottom: 4px; color: var(--muted); fo
 <nav class="tabs" aria-label="Sections">
   <div class="wrap" role="tablist">
     <button role="tab" aria-selected="true" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9z" fill="currentColor"/></svg>Today</button>
+    <button role="tab" aria-selected="false" data-view="diet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M8 7c0-2 2-2 2-4M12 7c0-2 2-2 2-4"/></svg>Diet</button>
     <button role="tab" aria-selected="false" data-view="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>Progress</button>
-    <button role="tab" aria-selected="false" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Plan</button>
+    <button role="tab" aria-selected="false" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Goal</button>
   </div>
 </nav>
 
@@ -783,6 +834,54 @@ const ACTIVITY = [
   { v:1.55, e:'🏃', t:'Moderate', d:'Exercise 3–5 days' },
   { v:1.725, e:'🏋️', t:'Very active', d:'Hard exercise most days' },
 ];
+
+/* Diet plan: South Indian meal options per meal. Each item is
+   [food id, portions, flex]. Flex items (the staple: idli, rice, chapati…)
+   grow or shrink so the meal fits its share of your daily limit; the rest
+   (sambar, vegetables, curd…) stay as they are. */
+const DIET_PREFS = [
+  { id: 'veg', label: '🥦 Veg' },
+  { id: 'egg', label: '🥚 Egg' },
+  { id: 'nonveg', label: '🍗 Non-veg' },
+];
+const DIET = {
+  breakfast: [
+    { name: 'Idli with sambar', pref: 'veg', items: [['idli', 3, 1], ['sambar', 1], ['tchutney', 1]] },
+    { name: 'Pesarattu with chutney', pref: 'veg', items: [['pesarattu', 2, 1], ['tchutney', 1]] },
+    { name: 'Ragi dosa with sambar', pref: 'veg', items: [['ragidosa', 2, 1], ['sambar', 1]] },
+    { name: 'Vegetable upma with curd', pref: 'veg', items: [['upma', 1, 1], ['curd', 0.5]] },
+    { name: 'Oats with milk and a banana', pref: 'veg', items: [['oats', 1, 1], ['banana', 1]] },
+    { name: 'Omelette with chapati', pref: 'egg', items: [['omelette', 1], ['chapati', 1, 1], ['salad', 1]] },
+    { name: 'Idli with boiled eggs', pref: 'egg', items: [['idli', 2, 1], ['egg', 2], ['tchutney', 1]] },
+  ],
+  lunch: [
+    { name: 'Rice, sambar, poriyal and curd', pref: 'veg', items: [['rice', 1, 1], ['sambar', 1], ['poriyal', 1], ['curd', 0.5]] },
+    { name: 'Rice, dal, kootu and salad', pref: 'veg', items: [['rice', 1, 1], ['dal', 1], ['kootu', 1], ['salad', 1]] },
+    { name: 'Chapati, dal and poriyal', pref: 'veg', items: [['chapati', 2, 1], ['dal', 1], ['poriyal', 1], ['salad', 1]] },
+    { name: 'Red rice, sambar and avial', pref: 'veg', items: [['brownrice', 1, 1], ['sambar', 1], ['avial', 1]] },
+    { name: 'Chapati with eggs and dal', pref: 'egg', items: [['chapati', 2, 1], ['egg', 2], ['dal', 0.5], ['poriyal', 1]] },
+    { name: 'Rice with fish curry and poriyal', pref: 'nonveg', items: [['rice', 1, 1], ['fishcurry', 1], ['poriyal', 1], ['salad', 1]] },
+    { name: 'Rice with chicken curry and poriyal', pref: 'nonveg', items: [['rice', 1, 1], ['chkcurry', 1], ['poriyal', 1]] },
+  ],
+  snack: [
+    { name: 'Sundal', pref: 'veg', items: [['sundal', 1, 1]] },
+    { name: 'Guava and buttermilk', pref: 'veg', items: [['guava', 1, 1], ['buttermilk', 1]] },
+    { name: 'A handful of nuts', pref: 'veg', items: [['nuts', 1, 1]] },
+    { name: 'Banana with tea, no sugar', pref: 'veg', items: [['banana', 1, 1], ['blackcoffee', 1]] },
+    { name: 'Papaya and buttermilk', pref: 'veg', items: [['papaya', 1, 1], ['buttermilk', 1]] },
+    { name: 'Boiled eggs and buttermilk', pref: 'egg', items: [['egg', 2, 1], ['buttermilk', 1]] },
+  ],
+  dinner: [
+    { name: 'Chapati, dal and salad', pref: 'veg', items: [['chapati', 2, 1], ['dal', 1], ['salad', 1]] },
+    { name: 'Dosa with sambar', pref: 'veg', items: [['dosa', 2, 1], ['sambar', 1]] },
+    { name: 'Idiyappam with veg kurma', pref: 'veg', items: [['idiyappam', 3, 1], ['kurma', 1]] },
+    { name: 'Ragi dosa, sambar and salad', pref: 'veg', items: [['ragidosa', 2, 1], ['sambar', 1], ['salad', 1]] },
+    { name: 'Idli with egg and sambar', pref: 'egg', items: [['idli', 3, 1], ['egg', 1], ['sambar', 1]] },
+    { name: 'Chapati with chicken curry', pref: 'nonveg', items: [['chapati', 2, 1], ['chkcurry', 1], ['salad', 1]] },
+    { name: 'Chapati with fish curry', pref: 'nonveg', items: [['chapati', 2, 1], ['fishcurry', 1], ['salad', 1]] },
+  ],
+};
+
 function planOf(p) { return (p && (p.plan || (p.goal === 'maintain' ? 'medium' : p.goal ? 'low' : ''))) || 'low'; }
 
 /* Tips are phrased only as strongly as the evidence behind them. */
@@ -826,7 +925,8 @@ let currentView = 'today';
 function blankState() {
   return {
     profile: null,          // { age, sex, height, weight, activity, plan: low|medium|high, override }
-    settings: { hungerCheck: true, theme: '', reminders: DEFAULT_REMINDERS.map(r => ({...r})) },
+    settings: { hungerCheck: true, theme: '', dietPref: 'veg', reminders: DEFAULT_REMINDERS.map(r => ({...r})) },
+    planPicks: {},          // { 'YYYY-MM-DD': { meal: option index } } chosen with "Another option"
     customFoods: [],
     log: {},                // { 'YYYY-MM-DD': [ { f, name, unit, kcal, tags, qty, meal, hunger, b, t } ] }
     fired: {},              // { 'YYYY-MM-DD:reminderId': true }
@@ -929,6 +1029,13 @@ function toast(msg) {
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
+/* "1 cup" × 1.5 → "1½ cup"; "1 dosa" × 3 → "3 dosa"; "2 tbsp" × 2 → "2 × 2 tbsp". */
+function fmtQty(q) { const w = Math.floor(q), h = q - w >= 0.5; return (w || !h ? String(w) : '') + (h ? '½' : ''); }
+function qtyUnit(qty, unit) {
+  const m = /^1 (.+)$/.exec(unit);
+  if (m) return fmtQty(qty) + ' ' + m[1];
+  return qty === 1 ? unit : fmtQty(qty) + ' × ' + unit;
+}
 function allFoods() { return [...state.customFoods, ...FOODS]; }
 function applyTheme() {
   const t = state.settings.theme;
@@ -959,7 +1066,7 @@ function renderToday() {
   // Status + pills
   const left = target - total;
   const st = $('#statusLine'), sub = $('#statusSub');
-  if (!target) { st.textContent = 'Set your plan'; sub.textContent = 'Tap Plan below. It takes 20 seconds.'; }
+  if (!target) { st.textContent = 'Set your plan'; sub.textContent = 'Tap Goal below. It takes 20 seconds.'; }
   else if (!entries.length) { st.textContent = isToday ? 'Fresh start! 🌱' : 'Nothing logged'; sub.textContent = fmt(target) + ' kcal to spend ' + (isToday ? 'today' : 'that day') + '.'; }
   else if (level === 'over') { st.textContent = fmt(-left) + ' kcal over'; sub.textContent = isToday ? 'Stop here for today. Tomorrow starts fresh.' : 'Went past the limit that day.'; }
   else if (level === 'warn') { st.textContent = 'Nearly there'; sub.textContent = isToday ? 'Past 80%. Keep the next meal light.' : 'Close to the limit.'; }
@@ -1018,15 +1125,23 @@ function renderToday() {
       '<div class="meal-title"><b>' + m.label + '</b><span class="num">' + fmt(sub) + (budget ? ' / ~' + fmt(budget) : '') + ' kcal</span>' +
       (budget ? '<div class="meal-bar"><i class="' + (sub > budget ? 'over' : '') + '" style="width:' + pct + '%"></i></div>' : '') + '</div>' +
       '<button class="add-btn" data-add="' + m.id + '">+ ADD</button></div>' +
+      (!list.length && isToday && target ? suggestHtml(m.id) : '') +
       (list.length ? '<ul class="entries">' + list.map(({ e, i }) => {
         const lv = levelOf(e.kcal);
         return '<li><span class="fe lvl-' + lv + '">' + foodEmoji(e) + '</span>' +
-          '<span class="name">' + esc(e.name) + '<small>' + (e.qty === 1 ? '' : e.qty + ' × ') + esc(e.unit) + (e.hunger ? ' · hunger ' + e.hunger + '/5' : '') + '</small></span>' +
+          '<span class="name">' + esc(e.name) + '<small>' + esc(qtyUnit(e.qty, e.unit)) + (e.hunger ? ' · hunger ' + e.hunger + '/5' : '') + '</small></span>' +
           '<span class="kcal num">' + fmt(e.kcal * e.qty) + '</span>' +
           '<button class="del" data-del="' + i + '" aria-label="Remove ' + esc(e.name) + '">✕</button></li>';
       }).join('') + '</ul>' : '') +
       '</div>';
   }).join('');
+}
+function suggestHtml(meal) {
+  const plan = planFor(todayKey(), meal);
+  if (!plan) return '';
+  return '<div class="suggest"><span style="font-size:22px">📋</span><span class="grow"><b>Plan: ' + esc(plan.name) + '</b><small>' +
+    esc(plan.items.map(x => (x.qty === 1 ? '' : fmtQty(x.qty) + ' ') + x.f.name.toLowerCase()).join(' + ')) + ' · ' + fmt(plan.kcal) + ' kcal</small></span>' +
+    '<button class="btn go slim" data-plog="' + meal + '">I ate this</button></div>';
 }
 function renderPlanChip() {
   const c = $('#planChip');
@@ -1040,6 +1155,8 @@ $('#fab').onclick = () => openAdd();
 document.addEventListener('click', e => {
   const add = e.target.closest('[data-add]');
   if (add) { openAdd(add.dataset.add); return; }
+  const pl = e.target.closest('[data-plog]');
+  if (pl) { logPlan(pl.dataset.plog); renderToday(); return; }
   const del = e.target.closest('[data-del]');
   if (del) {
     const i = Number(del.dataset.del);
@@ -1057,7 +1174,7 @@ $('#nextDay').onclick = () => { if (viewDay !== todayKey()) { viewDay = dayKeyOf
 let add = null; // { meal, hunger, tray: Map(foodId -> qty), q, cat, lv, last }
 
 function openAdd(meal, opts = {}) {
-  if (!dailyTarget()) { showView('settings'); toast('Set up your plan first'); return; }
+  if (!dailyTarget()) { showView('settings'); toast('Set up your goal first'); return; }
   add = { meal: meal || mealForNow(), hunger: null, tray: new Map(), q: '', cat: '', lv: '', last: null };
   const askHunger = state.settings.hungerCheck && viewDay === todayKey() && !opts.skipHunger;
   $('#addDialog').showModal();
@@ -1164,7 +1281,7 @@ function foodCard(f) {
     '<div class="pic lvl-' + lv + '"><span class="badge ' + lv + '">' + LEVELS[lv].name + '</span>' + foodEmoji(f) + '</div>' +
     '<div class="n">' + esc(f.name) + '</div><div class="u">' + esc(f.unit) + '</div>' +
     '<div class="foot"><span class="k num">' + f.kcal + '<small> kcal</small></span>' +
-    (q ? '<span class="qty"><button data-dec="' + id + '" aria-label="Less ' + esc(f.name) + '">−</button><output>' + q + '</output><button data-inc="' + id + '" aria-label="More ' + esc(f.name) + '">+</button></span>'
+    (q ? '<span class="qty"><button data-dec="' + id + '" aria-label="Less ' + esc(f.name) + '">−</button><output>' + fmtQty(q) + '</output><button data-inc="' + id + '" aria-label="More ' + esc(f.name) + '">+</button></span>'
        : '<button class="addc" data-inc="' + id + '" aria-label="Add ' + esc(f.name) + '">ADD</button>') +
     '</div></div>';
 }
@@ -1276,6 +1393,115 @@ function saveCustom() {
   add.cat = ''; add.lv = ''; add.q = '';
   renderPicker();
 }
+
+/* ---------- Diet plan ---------- */
+let dietDay = null;
+function dietPref() { return state.settings.dietPref || 'veg'; }
+function dietOptions(meal) {
+  const pref = dietPref();
+  const ok = pref === 'nonveg' ? ['veg', 'egg', 'nonveg'] : pref === 'egg' ? ['veg', 'egg'] : ['veg'];
+  return DIET[meal].filter(o => ok.includes(o.pref));
+}
+function roundTo(q, step) { return Math.max(step, Math.round(q / step) * step); }
+/* Size one option to a calorie budget. */
+function sizeOption(opt, budget) {
+  const foods = allFoods();
+  const items = opt.items.map(([id, qty, flex]) => ({ f: foods.find(x => x.id === id), qty, base: qty, flex: !!flex })).filter(x => x.f);
+  const fixedK = items.filter(x => !x.flex).reduce((a, x) => a + x.f.kcal * x.qty, 0);
+  const flexK = items.filter(x => x.flex).reduce((a, x) => a + x.f.kcal * x.qty, 0);
+  let factor = flexK ? (budget - fixedK) / flexK : 1;
+  if (factor < 0.5) {
+    // Small budget: shrink everything, not just the staple.
+    const all = budget / (fixedK + flexK);
+    items.forEach(x => { x.qty = roundTo(x.qty * all, 0.5); });
+  } else {
+    if (factor > 1.6) {
+      // Big budget: grow the sides too, so it's more dal and vegetables
+      // rather than a tower of chapatis.
+      items.forEach(x => { if (!x.flex && x.f.kcal > 60) x.qty = roundTo(x.qty * 1.5, stepFor(x.f)); });
+      const fixed2 = items.filter(x => !x.flex).reduce((a, x) => a + x.f.kcal * x.qty, 0);
+      factor = (budget - fixed2) / flexK;
+    }
+    factor = Math.min(factor, 2); // never more than double the usual staple
+    items.forEach(x => { if (x.flex) x.qty = roundTo(x.qty * factor, stepFor(x.f)); });
+  }
+  // Rounding up must never push a meal past its share: trim a step at a time.
+  const total = () => items.reduce((a, x) => a + x.f.kcal * x.qty, 0);
+  for (let guard = 0; guard < 10 && total() > budget * 1.02; guard++) {
+    // First undo any enlarged sides, then shave the staple, then anything else.
+    const rank = i => (!i.flex && i.qty > i.base) ? 0 : i.flex ? 1 : 2;
+    const x = items.filter(i => i.qty > stepFor(i.f)).sort((p, q) => (rank(p) - rank(q)) || (q.f.kcal * q.qty - p.f.kcal * p.qty))[0];
+    if (!x) break;
+    x.qty -= stepFor(x.f);
+  }
+  return { name: opt.name, items, kcal: Math.round(total()) };
+}
+function dayNumOf(k) { return Math.floor(parseKey(k).getTime() / 864e5); }
+function planFor(k, meal) {
+  const opts = dietOptions(meal);
+  if (!opts.length || !dailyTarget()) return null;
+  const picks = (state.planPicks || {})[k] || {};
+  const offset = { breakfast: 0, lunch: 2, snack: 1, dinner: 3 }[meal];
+  const i = ((picks[meal] ?? (dayNumOf(k) + offset)) % opts.length + opts.length) % opts.length;
+  const m = MEALS.find(x => x.id === meal);
+  return sizeOption(opts[i], dailyTarget() * m.share);
+}
+function portionText(x) { return qtyUnit(x.qty, x.f.unit); }
+function logPlan(meal) {
+  const k = todayKey();
+  const plan = planFor(k, meal);
+  if (!plan) return;
+  const b = Date.now().toString(36);
+  const list = state.log[k] = state.log[k] || [];
+  plan.items.forEach(x => list.push({ f: x.f.id, name: x.f.name, unit: x.f.unit, kcal: x.f.kcal, tags: x.f.tags || [], qty: x.qty, meal, hunger: null, b, t: Date.now() }));
+  save();
+  toast(mealLabel(meal) + ' logged ✅ ' + fmt(plan.kcal) + ' kcal');
+}
+function nextOption(k, meal) {
+  state.planPicks = state.planPicks || {};
+  const picks = state.planPicks[k] = state.planPicks[k] || {};
+  const offset = { breakfast: 0, lunch: 2, snack: 1, dinner: 3 }[meal];
+  picks[meal] = (picks[meal] ?? (dayNumOf(k) + offset)) + 1;
+  // Keep only the last week of picks.
+  const cutoff = dayKeyOffset(todayKey(), -7);
+  for (const d in state.planPicks) if (d < cutoff) delete state.planPicks[d];
+  save();
+}
+function renderDiet() {
+  const t = todayKey();
+  if (!dietDay || dietDay < t) dietDay = t;
+  const target = dailyTarget();
+  const isToday = dietDay === t;
+  $('#dietDays').innerHTML = [0, 1, 2].map(n => { const k = dayKeyOffset(t, n); return '<button data-dday="' + k + '" aria-pressed="' + (k === dietDay) + '">' + (n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : parseKey(k).toLocaleDateString('en-IN', { weekday: 'short' })) + '</button>'; }).join('');
+  $('#dietPrefs').innerHTML = DIET_PREFS.map(p => '<button data-dpref="' + p.id + '" aria-pressed="' + (dietPref() === p.id) + '">' + p.label + '</button>').join('');
+  const plans = MEALS.map(m => ({ m, plan: planFor(dietDay, m.id) }));
+  const dayTotal = plans.reduce((a, x) => a + (x.plan ? x.plan.kcal : 0), 0);
+  $('#dietTotal').textContent = target ? fmt(dayTotal) : '–';
+  $('#dietSub').textContent = target ? 'kcal planned of your ' + fmt(target) + ' limit · ' + (state.profile.override ? 'own limit' : PLANS.find(p => p.id === planOf(state.profile)).name.toLowerCase()) : 'Set up your goal first';
+  const logged = new Set((state.log[dietDay] || []).map(e => e.meal));
+  const times = {};
+  state.settings.reminders.forEach(r => { if (r.meal) times[r.meal] = r.time; });
+  $('#dietMeals').innerHTML = plans.map(({ m, plan }) => {
+    if (!plan) return '';
+    const done = logged.has(m.id);
+    const tm = times[m.id] ? new Date('2000-01-01T' + times[m.id]).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '';
+    return '<div class="card meal dmeal">' +
+      '<div class="meal-head"><div class="meal-ico" style="background:' + m.tint + '">' + m.emoji + '</div>' +
+      '<div class="meal-title"><b>' + m.label + (tm ? ' <span class="muted small" style="font-weight:600">· ' + tm + '</span>' : '') + '</b><span>' + esc(plan.name) + '</span></div>' +
+      '<span class="dk num">' + fmt(plan.kcal) + '<small>kcal</small></span></div>' +
+      '<ul class="entries">' + plan.items.map(x => '<li><span class="fe lvl-' + levelOf(x.f.kcal) + '">' + foodEmoji(x.f) + '</span><span class="name">' + esc(x.f.name) + '<small>' + esc(portionText(x)) + '</small></span><span class="kcal num">' + fmt(x.f.kcal * x.qty) + '</span></li>').join('') + '</ul>' +
+      '<div class="row" style="margin-top:12px">' +
+        '<button class="btn slim" data-dnext="' + m.id + '">🔄 Another option</button>' +
+        (isToday ? (done ? '<button class="btn slim" disabled>✓ Logged</button>' : '<button class="btn go slim" data-dlog="' + m.id + '">✓ I ate this</button>') : '') +
+      '</div></div>';
+  }).join('');
+}
+$('#view-diet').addEventListener('click', e => {
+  const d = e.target.closest('[data-dday]'); if (d) { dietDay = d.dataset.dday; renderDiet(); return; }
+  const p = e.target.closest('[data-dpref]'); if (p) { state.settings.dietPref = p.dataset.dpref; save(); renderDiet(); return; }
+  const n = e.target.closest('[data-dnext]'); if (n) { nextOption(dietDay, n.dataset.dnext); renderDiet(); return; }
+  const l = e.target.closest('[data-dlog]'); if (l) { logPlan(l.dataset.dlog); renderDiet(); }
+});
 
 /* ---------- History ---------- */
 function renderHistory() {
@@ -1730,7 +1956,7 @@ if (NATIVE) {
 }
 
 /* ---------- Views ---------- */
-const VIEW_TITLES = { today: 'Plate Check', history: 'Your progress', settings: 'Your plan' };
+const VIEW_TITLES = { today: 'Plate Check', diet: 'Diet plan', history: 'Your progress', settings: 'Your goal' };
 function showView(v) {
   currentView = v;
   document.querySelectorAll('section.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
@@ -1739,6 +1965,7 @@ function showView(v) {
   $('#fab').hidden = v !== 'today' || !state.profile;
   renderPlanChip();
   if (v === 'today') renderToday();
+  if (v === 'diet') renderDiet();
   if (v === 'history') renderHistory();
   if (v === 'settings') renderSettings();
   window.scrollTo(0, 0);
