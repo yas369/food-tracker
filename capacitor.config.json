@@ -3,12 +3,12 @@
   "appName": "Plate Check",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#F6F4EF"
+    "backgroundColor": "#F5F0FC"
   },
   "plugins": {
     "LocalNotifications": {
       "smallIcon": "ic_stat_plate",
-      "iconColor": "#2F6B4F"
+      "iconColor": "#5B1BAA"
     }
   }
 }
