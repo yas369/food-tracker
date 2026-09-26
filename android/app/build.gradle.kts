@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.yas369.platecheck"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android needs the Android 37 SDK to compile against.
+    // This only sets which APIs the build can see; it doesn't change which
+    // phones the app installs on (minSdk) or its runtime behaviour (targetSdk).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
