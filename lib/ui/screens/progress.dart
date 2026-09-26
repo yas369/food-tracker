@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/catalog.dart';
+import '../../data/foods.dart';
 import '../../logic.dart';
 import '../../models.dart';
 import '../../store.dart';
@@ -40,26 +41,35 @@ class ProgressScreen extends StatelessWidget {
     for (final e in weekEntries) {
       byMeal[e.meal] = (byMeal[e.meal] ?? 0) + e.total;
     }
-    const mealColors = {
-      'breakfast': [Color(0xFFF59E0B), Color(0xFFFBBF24)],
-      'lunch': [Color(0xFF0FA548), Color(0xFF4ADE80)],
-      'snack': [Color(0xFFE0245E), Color(0xFFFB7185)],
-      'dinner': [Color(0xFF5B1BAA), Color(0xFF8B2CF5)],
-    };
 
-    return ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 120), children: [
-      Pairs(
-        children: [
-          _Stat('🔥', '$streak', 'day streak within limit', const [Color(0xFF5B1BAA), Color(0xFF8B2CF5)]),
-          _Stat('✅', '$within/${week.length}', 'logged days within limit', const [Color(0xFF0A8F3E), Color(0xFF22C55E)]),
-          _Stat('⚡', week.isEmpty ? '–' : fmt(avg), 'average kcal a day', const [Color(0xFFC2410C), Color(0xFFF59E0B)]),
-          _Stat('📅', '${week.length}/7', 'days logged this week', const [Color(0xFFBE123C), Color(0xFFF43F7E)]),
-        ],
+    final insights = _insights(c, days, weekEntries, byMeal, weekKcal, week.length, mix);
+    Widget insight((String, String) x) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(x.$1, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(x.$2, style: const TextStyle(fontSize: 14, height: 1.4))),
+          ]),
+        );
+
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 120), children: [
+      AppCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('THIS WEEK', style: TextStyle(fontSize: 12, letterSpacing: .8, fontWeight: FontWeight.w700, color: p.muted)),
+          gap8,
+          Text(week.isEmpty ? 'Nothing logged yet' : '$within of ${week.length} logged days within your limit',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.25)),
+          gap12,
+          Row(children: [
+            _mini(p, '🔥 $streak', 'day streak'),
+            _mini(p, week.isEmpty ? '–' : fmt(avg), 'avg kcal'),
+            _mini(p, '${week.length}/7', 'days logged'),
+          ]),
+        ]),
       ),
-      gap16,
       AppCard(
         child: Column(children: [
-          const SectionTitle('📊 Last 14 days'),
+          const SectionTitle('Last 14 days'),
           DayBars(
             values: [for (final d in days) totals[d]!],
             labels: [for (final d in days) weekdayLetter(d)],
@@ -67,25 +77,33 @@ class ProgressScreen extends StatelessWidget {
             line: c.baseTarget.toDouble(),
             lineLabel: 'limit ${fmt(c.baseTarget)}',
             highlight: 13,
+            height: 150,
           ),
         ]),
       ),
       AppCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SectionTitle('🍩 Where calories came from', trailing: '7 days'),
-          if (weekKcal == 0)
-            const Padding(padding: EdgeInsets.all(12), child: Center(child: Muted('🍩  Log a few meals to see this.')))
-          else
+          const SectionTitle('What stands out'),
+          for (final x in insights.take(2)) insight(x),
+        ]),
+      ),
+      Fold(
+        title: 'More details',
+        subtitle: 'Where calories came from, by meal, and more',
+        children: [
+          if (weekKcal > 0) ...[
+            const Text('Where calories came from', style: TextStyle(fontWeight: FontWeight.w700)),
+            gap12,
             Row(children: [
-              Donut(parts: [for (final k in ['l', 'm', 'h']) (mix[k]!, p.levelColor(k))], center: '${(mix['l']! / weekKcal * 100).round()}%', caption: 'from low-cal'),
+              Donut(parts: [for (final k in ['l', 'm', 'h']) (mix[k]!, p.levelColor(k))], center: '${(mix['l']! / weekKcal * 100).round()}%', caption: 'from low-cal', size: 110),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(children: [
                   for (final k in ['l', 'm', 'h'])
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(children: [
-                        Container(width: 12, height: 12, decoration: BoxDecoration(color: p.levelColor(k), borderRadius: BorderRadius.circular(4))),
+                        Container(width: 10, height: 10, decoration: BoxDecoration(color: p.levelColor(k), borderRadius: BorderRadius.circular(3))),
                         gap8,
                         Expanded(child: Text(levelNames[k]!)),
                         Text('${(mix[k]! / weekKcal * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -94,53 +112,45 @@ class ProgressScreen extends StatelessWidget {
                 ]),
               ),
             ]),
-        ]),
-      ),
-      AppCard(
-        child: Column(children: [
-          const SectionTitle('🍽️ By meal', trailing: '7 days'),
-          for (final m in meals)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(children: [
-                Row(children: [
-                  Expanded(child: Text('${m.emoji} ${m.label}')),
-                  Flexible(
-                    child: Text('${weekKcal == 0 ? 0 : ((byMeal[m.id] ?? 0) / weekKcal * 100).round()}% · ${fmt(byMeal[m.id] ?? 0)} kcal',
-                        textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700)),
+            gap16,
+            const Text('By meal', style: TextStyle(fontWeight: FontWeight.w700)),
+            gap8,
+            for (final m in meals)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(children: [
+                  Row(children: [
+                    Expanded(child: Text('${m.emoji} ${m.label}')),
+                    Text('${((byMeal[m.id] ?? 0) / weekKcal * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ]),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(value: (byMeal[m.id] ?? 0) / weekKcal, minHeight: 8, backgroundColor: p.surface2, color: p.brand),
                   ),
                 ]),
-                const SizedBox(height: 5),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: Container(
-                    height: 10,
-                    color: p.surface2,
-                    alignment: Alignment.centerLeft,
-                    child: FractionallySizedBox(
-                      widthFactor: weekKcal == 0 ? 0 : (byMeal[m.id] ?? 0) / weekKcal,
-                      child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: mealColors[m.id]!))),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-        ]),
+              ),
+          ],
+          for (final x in insights.skip(2)) insight(x),
+        ],
       ),
       AppCard(
+        color: p.greenSoft,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SectionTitle('🔍 What the pattern says'),
-          for (final (e, t) in _insights(c, days, weekEntries, byMeal, weekKcal, week.length, mix))
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: p.surface2, borderRadius: BorderRadius.circular(14)),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(e, style: const TextStyle(fontSize: 18)), const SizedBox(width: 10), Expanded(child: Text(t))]),
-            ),
+          const Text('Tip of the day', style: TextStyle(fontWeight: FontWeight.w700)),
+          gap4,
+          Text(tips[dayNum(today) % tips.length], style: const TextStyle(fontSize: 14, height: 1.45)),
         ]),
       ),
     ]);
   }
+
+  Widget _mini(Pal p, String v, String label) => Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(v, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          Text(label, style: TextStyle(fontSize: 12, color: p.muted)),
+        ]),
+      );
 
   List<(String, String)> _insights(Calc c, List<String> days, List<Entry> weekEntries, Map<String, double> byMeal, double weekKcal, int logged, Map<String, double> mix) {
     final ins = <(String, String)>[];
@@ -176,25 +186,4 @@ class ProgressScreen extends StatelessWidget {
     if (tf.isNotEmpty) ins.add(('🏆', 'Most calories this week came from ${tf.first.key}: ${fmt(tf.first.value)} kcal.'));
     return ins;
   }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat(this.emoji, this.value, this.label, this.colors);
-  final String emoji, value, label;
-  final List<Color> colors;
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(gradient: LinearGradient(colors: colors), borderRadius: BorderRadius.circular(20)),
-        child: Stack(clipBehavior: Clip.none, children: [
-          Positioned(right: -38, bottom: -38, child: Container(width: 80, height: 80, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), shape: BoxShape.circle))),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 10),
-            FittedBox(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900))),
-            Text(label, maxLines: 2, style: const TextStyle(color: Colors.white, fontSize: 13)),
-          ]),
-        ]),
-      );
 }

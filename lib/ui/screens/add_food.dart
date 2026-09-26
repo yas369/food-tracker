@@ -184,21 +184,19 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         );
     return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 16), children: [
       pills([
-        Pill('All levels', selected: lv.isEmpty, onTap: () => setState(() => lv = '')),
-        for (final k in ['l', 'm', 'h'])
-          Pill(levelNames[k]!, selected: lv == k, color: p.levelColor(k), dot: p.levelColor(k), onTap: () => setState(() => lv = k)),
-      ]),
-      pills([
-        Pill('🍽️ All', selected: cat.isEmpty, onTap: () => setState(() => cat = '')),
+        Pill('All', selected: cat.isEmpty && lv.isEmpty, onTap: () => setState(() {
+              cat = '';
+              lv = '';
+            })),
+        Pill('Low-cal only', selected: lv == 'l', color: p.low, dot: p.low, onTap: () => setState(() => lv = lv == 'l' ? '' : 'l')),
         for (final ct in cats) Pill('${catEmoji[ct] ?? '🍽️'} $ct', selected: cat == ct, onTap: () => setState(() => cat = ct)),
       ]),
       if (q.isEmpty && cat.isEmpty && lv.isEmpty && recent.isNotEmpty) ...[
         const _CatTitle('🕘 Recent'),
-        SizedBox(
-          height: 230,
-          child: ListView(scrollDirection: Axis.horizontal, children: [
-            for (final f in recent)
-              Padding(padding: const EdgeInsets.only(right: 10), child: Align(alignment: Alignment.topCenter, child: SizedBox(width: 158, child: _foodCard(p, f)))),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            for (final f in recent) Padding(padding: const EdgeInsets.only(right: 10), child: SizedBox(width: 158, child: _foodCard(p, f))),
           ]),
         ),
       ],

@@ -1,318 +1,253 @@
+// Today answers one question first: how much can I still eat, and what's
+// next? Everything else is one tap away.
+
 import 'package:flutter/material.dart';
 
 import '../../data/catalog.dart';
-import '../../data/foods.dart';
 import '../../logic.dart';
+import '../../models.dart';
 import '../../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'add_food.dart';
 
-class TodayScreen extends StatelessWidget {
+class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key, required this.store, required this.day, required this.onDay, required this.goMe});
   final AppStore store;
   final String day;
   final ValueChanged<String> onDay;
   final VoidCallback goMe;
+  @override
+  State<TodayScreen> createState() => _TodayScreenState();
+}
 
+class _TodayScreenState extends State<TodayScreen> {
+  String? open; // the meal whose items are showing
+
+  AppStore get store => widget.store;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = store.c;
+    final day = widget.day;
+    final isToday = day == store.today;
+    final entries = c.entriesOn(day);
+    final target = c.dailyTarget(day);
+    final nudge = isToday ? _topNudge(entries) : null;
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 120), children: [
+      _Summary(store: store, day: day, onDay: widget.onDay),
+      if (target <= 0)
+        AppCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Set your goal to begin', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            gap8,
+            GoButton('Set my goal', onPressed: widget.goMe),
+          ]),
+        ),
+      if (isToday && target > 0) _NextUp(store: store),
+      if (nudge != null) _Nudge(emoji: nudge.$1, text: nudge.$2),
+      _MealList(store: store, day: day, open: open, onToggle: (m) => setState(() => open = open == m ? null : m)),
+    ]);
+  }
+
+  /// At most one nudge: the one that matters most right now.
+  (String, String)? _topNudge(List<Entry> entries) {
+    double count(String tag) => entries.where((e) => e.tags.contains(tag)).fold(0.0, (a, e) => a + e.qty);
+    final unhungry = {for (final e in entries) if (e.hunger != null && e.hunger! <= 2) e.b}.length;
+    if (unhungry >= 2) return ('🧭', 'You ate $unhungry times today without being hungry. That’s where overeating usually starts.');
+    if (count('fried') >= 2) return ('🍳', 'Two or more fried items today. Keep the rest non-fried.');
+    if (count('sweet') >= 3) return ('🍬', 'Three sweet items today, counting tea and coffee. Try the next one without sugar.');
+    if (entries.isNotEmpty && count('plant') == 0 && store.now.hour >= 14) return ('🥦', 'No vegetables or fruit yet. Aim for half your plate.');
+    if (entries.length >= 3 && count('protein') == 0) return ('🥚', 'No protein yet. Dal, curd or eggs will keep you fuller.');
+    return null;
+  }
+}
+
+/// The one big number: what's left today.
+class _Summary extends StatelessWidget {
+  const _Summary({required this.store, required this.day, required this.onDay});
+  final AppStore store;
+  final String day;
+  final ValueChanged<String> onDay;
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
     final c = store.c;
-    final today = store.today;
-    final isToday = day == today;
-    final entries = c.entriesOn(day);
-    final total = sumKcal(entries);
+    final isToday = day == store.today;
+    final total = sumKcal(c.entriesOn(day));
     final target = c.dailyTarget(day);
-    final level = levelFor(total, target);
     final left = target - total;
+    final level = levelFor(total, target);
     final burnt = c.moveCredit ? c.burntOn(day) : 0;
-
-    String status, sub;
-    if (target <= 0) {
-      status = 'Set your goal';
-      sub = 'Tap Me below. It takes 20 seconds.';
-    } else if (entries.isEmpty) {
-      status = isToday ? 'Fresh start! 🌱' : 'Nothing logged';
-      sub = '${fmt(target)} kcal to spend ${isToday ? 'today' : 'that day'}.';
-    } else if (level == 'over') {
-      status = '${fmt(-left)} kcal over';
-      sub = isToday ? 'Stop here for today. Tomorrow starts fresh.' : 'Went past the limit that day.';
-    } else if (level == 'warn') {
-      status = 'Nearly there';
-      sub = isToday ? 'Past 80%. Keep the next meal light.' : 'Close to the limit.';
-    } else {
-      status = 'On track 💪';
-      sub = '${fmt(left)} kcal still to go.';
-    }
-
-    final profile = store.d.profile;
-    final planLabel = profile == null
-        ? 'limit'
-        : burnt > 0
-            ? 'limit + moves'
-            : profile.override != null
-                ? 'own limit'
-                : '${planInfo(profile.plan).name.split(' ').first.toLowerCase()} plan';
-
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 160),
-      children: [
-        HeroBox(
-          child: Column(children: [
-            Row(children: [
-              _NavBtn('‹', 'Previous day', () => onDay(addDays(day, -1))),
-              Expanded(child: Text(dayLabel(day, today), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16))),
-              _NavBtn('›', 'Next day', isToday ? null : () => onDay(addDays(day, 1))),
-            ]),
-            gap8,
-            Row(children: [
-              Ring(progress: target > 0 ? total / target : 0, level: level, big: fmt(total), sub: target > 0 ? '${(total / target * 100).round()}% of limit' : 'kcal eaten'),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(status, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800, height: 1.2)),
-                  gap4,
-                  Text(sub, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                ]),
-              ),
-            ]),
-            gap16,
-            Row(children: [
-              Expanded(child: HeroStat(fmt(total), 'eaten')),
-              gap8,
-              Expanded(child: HeroStat(target > 0 ? fmt(left.abs()) : '–', left < 0 ? 'over' : 'left', valueColor: left < 0 ? const Color(0xFFFDA4C0) : const Color(0xFF86EFAC))),
-              gap8,
-              Expanded(child: HeroStat(target > 0 ? fmt(target) : '–', planLabel)),
-            ]),
-            if (burnt > 0) ...[
-              gap12,
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: const Color(0x3822C55E), borderRadius: BorderRadius.circular(12)),
-                child: Text('🔥 +${fmt(burnt)} kcal earned by moving · ${fmt(c.stepsOn(day))} steps',
-                    style: const TextStyle(color: Color(0xFFD9FBE5), fontSize: 13, fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ]),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(children: [
-            if (isToday && target > 0 && level != 'ok') _Banner(level: level, left: left),
-            _MixCard(store: store, day: day),
-            for (final m in meals) _MealCard(store: store, day: day, meal: m, target: target),
-            AppCard(
-              gradient: LinearGradient(colors: [p.greenSoft, p.brandSoft]),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionTitle('💡 Why it matters'),
-                Text(tips[dayNum(day) % tips.length], style: const TextStyle(fontSize: 15, height: 1.45)),
-              ]),
-            ),
-          ]),
-        ),
-      ],
-    );
-  }
-}
-
-class _NavBtn extends StatelessWidget {
-  const _NavBtn(this.t, this.label, this.onTap);
-  final String t;
-  final String label;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: label,
-        child: Opacity(
-          opacity: onTap == null ? .3 : 1,
-          child: Material(
-            color: Colors.white.withValues(alpha: .14),
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: SizedBox(width: 38, height: 38, child: Center(child: Text(t, style: const TextStyle(color: Colors.white, fontSize: 22)))),
+    final barColor = level == 'over' ? const Color(0xFFFDA4C0) : level == 'warn' ? const Color(0xFFFCD34D) : const Color(0xFF86EFAC);
+    return AppCard(
+      gradient: heroGradient(p),
+      padding: const EdgeInsets.fromLTRB(20, 6, 8, 20),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(dayLabel(day, store.today), style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600))),
+          IconButton(tooltip: 'Previous day', onPressed: () => onDay(addDays(day, -1)), icon: const Icon(Icons.chevron_left, color: Colors.white)),
+          IconButton(
+            tooltip: 'Next day',
+            onPressed: isToday ? null : () => onDay(addDays(day, 1)),
+            icon: Icon(Icons.chevron_right, color: isToday ? Colors.white24 : Colors.white),
+          ),
+        ]),
+        Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+          Text(target > 0 ? fmt(left.abs()) : fmt(total), style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w800, height: 1.1)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(target <= 0 ? 'kcal eaten' : left < 0 ? 'kcal over' : 'kcal left',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+          ),
+        ]),
+        if (target > 0) ...[
+          gap12,
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(value: (total / target).clamp(0, 1), minHeight: 8, backgroundColor: Colors.white24, color: barColor),
             ),
           ),
-        ),
-      );
-}
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.level, required this.left});
-  final String level;
-  final double left;
-  @override
-  Widget build(BuildContext context) {
-    final p = Pal.of(context);
-    final over = level == 'over';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: over ? p.highSoft : p.medSoft, borderRadius: BorderRadius.circular(18)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(over ? '🛑' : '⚠️', style: const TextStyle(fontSize: 24)),
-        gap12,
-        Expanded(
-          child: Text.rich(TextSpan(children: [
-            TextSpan(text: over ? 'You’ve passed today’s limit.\n' : '${fmt(left)} kcal left for today.\n', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-            TextSpan(
-                text: over
-                    ? 'Still hungry? Have water, buttermilk, cucumber or a fruit, and close the kitchen for today.'
-                    : 'Plan what you’ll eat next before you get hungry.',
-                style: const TextStyle(fontSize: 14)),
-          ])),
-        ),
+          gap8,
+          Text('${fmt(total)} eaten of ${fmt(target)}${burnt > 0 ? ' · includes +${fmt(burnt)} from moving' : ''}',
+              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        ],
       ]),
     );
   }
 }
 
-class _MixCard extends StatelessWidget {
-  const _MixCard({required this.store, required this.day});
+/// The next meal to eat, from the diet plan, with one tap to log it.
+class _NextUp extends StatelessWidget {
+  const _NextUp({required this.store});
   final AppStore store;
-  final String day;
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
     final c = store.c;
-    final entries = c.entriesOn(day);
-    final mix = c.mixOf(entries);
-    final mt = mix.values.fold(0.0, (a, b) => a + b);
-    final isToday = day == store.today;
-    final hour = store.now.hour;
-
-    // Quality nudges
-    double count(String tag) => entries.where((e) => e.tags.contains(tag)).fold(0.0, (a, e) => a + e.qty);
-    final fried = count('fried'), sweet = count('sweet'), plant = count('plant'), protein = count('protein');
-    final nudges = <(String, String)>[];
-    if (fried >= 3) {
-      nudges.add(('🍳', '${fmtQty(fried)} fried items so far. Fried food is the fastest way to use up a day’s calories.'));
-    } else if (fried == 2) {
-      nudges.add(('🍳', 'Two fried items already. Make the rest of today’s food non-fried.'));
+    final logged = {for (final e in c.entriesOn(store.today)) e.meal};
+    final now = store.now.hour * 60 + store.now.minute;
+    final times = {for (final r in store.d.settings.reminders) if (r.meal != null) r.meal!: r.minutes};
+    // The first meal not yet logged whose time hasn't long passed.
+    MealInfo? next;
+    for (final m in meals) {
+      if (logged.contains(m.id)) continue;
+      if (m.id != 'dinner' && (times[m.id] ?? 0) + 150 < now) continue;
+      next = m;
+      break;
     }
-    if (sweet >= 3) nudges.add(('🍬', '${fmtQty(sweet)} sweet items today, including sweet tea and coffee. Try one without sugar next time.'));
-    if (entries.isNotEmpty && plant == 0 && (!isToday || hour >= 14)) {
-      nudges.add(('🥦', 'No vegetables or fruit logged ${isToday ? 'yet' : 'that day'}. Aim for about half your plate.'));
+    if (next == null) {
+      return AppCard(
+        child: Row(children: [
+          const Text('🌙', style: TextStyle(fontSize: 26)),
+          gap12,
+          const Expanded(child: Text('All meals logged. The kitchen can close for today.', style: TextStyle(fontSize: 15))),
+        ]),
+      );
     }
-    if (entries.length >= 3 && protein == 0) nudges.add(('🥚', 'No protein yet. Dal, sundal, curd or eggs will keep you fuller.'));
-    final unhungry = {for (final e in entries) if (e.hunger != null && e.hunger! <= 2) e.b}.length;
-    if (unhungry >= 2) nudges.add(('🧭', 'You ate $unhungry times ${isToday ? 'today' : 'that day'} without being hungry. That’s where overeating usually starts.'));
-    if (isToday && hour >= 22 && entries.any((e) => DateTime.fromMillisecondsSinceEpoch(e.t).hour >= 22)) {
-      nudges.add(('🌙', 'Late-night eating tends to be habit rather than hunger. Try brushing your teeth after dinner to close the kitchen.'));
-    }
-
+    final meal = next;
+    final plan = c.planFor(store.today, meal.id);
+    final time = store.d.settings.reminders.where((r) => r.meal == meal.id).map((r) => clock12(r.time)).firstOrNull;
     return AppCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SectionTitle('🎯 Calorie mix', trailing: mt == 0 ? null : mix['h']! / mt > .5 ? 'Mostly high-calorie' : mix['l']! / mt >= .3 ? 'Nice balance' : 'Add more green'),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: SizedBox(
-            height: 14,
-            child: mt == 0
-                ? Container(color: p.surface2)
-                : Row(children: [
-                    for (final k in ['l', 'm', 'h'])
-                      if (mix[k]! > 0) Expanded(flex: (mix[k]! / mt * 1000).round(), child: Container(color: p.levelColor(k))),
-                  ]),
-          ),
-        ),
+        Text('NEXT UP · ${meal.label.toUpperCase()}${time == null ? '' : ' · $time'}',
+            style: TextStyle(fontSize: 12, letterSpacing: .8, fontWeight: FontWeight.w700, color: p.muted)),
         gap8,
-        if (mt == 0)
-          const Muted('Log food to see how much comes from low, medium and high calorie foods.')
-        else
-          Wrap(spacing: 14, children: [
-            for (final k in ['l', 'm', 'h'])
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: p.levelColor(k), borderRadius: BorderRadius.circular(3))),
-                const SizedBox(width: 6),
-                Muted('${levelNames[k]} ${(mix[k]! / mt * 100).round()}%'),
-              ]),
+        if (plan == null)
+          const Text('Nothing from your kitchen fits this meal. Log what you eat.', style: TextStyle(fontSize: 15))
+        else ...[
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: Text(plan.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+            gap8,
+            Text('${fmt(plan.kcal)} kcal', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p.brand)),
           ]),
-        for (final (e, t) in nudges)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: p.surface2, borderRadius: BorderRadius.circular(14)),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(e, style: const TextStyle(fontSize: 18)),
-              const SizedBox(width: 10),
-              Expanded(child: Text(t, style: const TextStyle(fontSize: 14))),
-            ]),
-          ),
-      ]),
-    );
-  }
-}
-
-class _MealCard extends StatelessWidget {
-  const _MealCard({required this.store, required this.day, required this.meal, required this.target});
-  final AppStore store;
-  final String day;
-  final MealInfo meal;
-  final int target;
-  @override
-  Widget build(BuildContext context) {
-    final p = Pal.of(context);
-    final c = store.c;
-    final all = c.entriesOn(day);
-    final idx = [for (var i = 0; i < all.length; i++) if (all[i].meal == meal.id) i];
-    final sub = idx.fold(0.0, (a, i) => a + all[i].total);
-    final budget = ((target * meal.share) / 10).round() * 10;
-    final plan = idx.isEmpty && day == store.today && target > 0 ? c.planFor(store.today, meal.id) : null;
-    return AppCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(children: [
+          gap4,
+          Muted(plan.items.map((x) => '${qtyUnit(x.qty, x.f.unit)} ${x.name.toLowerCase()}').join(' · ')),
+        ],
+        gap12,
         Row(children: [
-          EmojiBox(meal.emoji, bg: p.soft(meal.tint)),
-          gap12,
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(meal.label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-              Muted('${fmt(sub)}${budget > 0 ? ' / ~${fmt(budget)}' : ''} kcal'),
-              if (budget > 0) ...[
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    value: (sub / budget).clamp(0, 1),
-                    minHeight: 6,
-                    backgroundColor: p.surface2,
-                    color: sub > budget ? p.high : p.brand,
-                  ),
-                ),
-              ],
-            ]),
-          ),
-          gap12,
-          AddChip(onTap: () => openAddFood(context, store, day, meal: meal.id)),
-        ]),
-        if (plan != null)
-          Container(
-            margin: const EdgeInsets.only(top: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: p.brandSoft, borderRadius: BorderRadius.circular(14)),
-            child: Row(children: [
-              const Text('📋', style: TextStyle(fontSize: 22)),
-              gap8,
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Plan: ${plan.name}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                  Muted('${plan.items.map((x) => (x.qty == 1 ? '' : '${fmtQty(x.qty)} ') + x.f.name.toLowerCase()).join(' + ')} · ${fmt(plan.kcal)} kcal', size: 12),
-                ]),
-              ),
-              gap8,
-              GoButton('I ate this', expand: false, onPressed: () {
+          if (plan != null) ...[
+            Expanded(
+              child: GoButton('I ate this', onPressed: () {
                 final k = store.logPlan(meal.id);
                 if (k != null) toast(context, '${meal.label} logged ✅ ${fmt(k)} kcal');
               }),
-            ]),
-          ),
-        for (final i in idx) _EntryRow(store: store, day: day, index: i),
+            ),
+            gap8,
+          ],
+          Expanded(child: SoftButton(plan == null ? 'Log a meal' : 'Something else', onPressed: () => openAddFood(context, store, store.today, meal: meal.id))),
+        ]),
       ]),
+    );
+  }
+}
+
+class _Nudge extends StatelessWidget {
+  const _Nudge({required this.emoji, required this.text});
+  final String emoji;
+  final String text;
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(color: Pal.of(context).medSoft, borderRadius: BorderRadius.circular(16)),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          gap12,
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
+        ]),
+      );
+}
+
+/// Four quiet rows; tap one to see or remove what's in it.
+class _MealList extends StatelessWidget {
+  const _MealList({required this.store, required this.day, required this.open, required this.onToggle});
+  final AppStore store;
+  final String day;
+  final String? open;
+  final ValueChanged<String> onToggle;
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    final all = store.c.entriesOn(day);
+    return Group(
+      title: day == store.today ? 'Today’s meals' : 'Meals',
+      children: [
+        for (final m in meals)
+          Builder(builder: (context) {
+            final idx = [for (var i = 0; i < all.length; i++) if (all[i].meal == m.id) i];
+            final sub = idx.fold(0.0, (a, i) => a + all[i].total);
+            final isOpen = open == m.id && idx.isNotEmpty;
+            return Column(children: [
+              InkWell(
+                onTap: idx.isEmpty ? () => openAddFood(context, store, day, meal: m.id) : () => onToggle(m.id),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+                  child: Row(children: [
+                    Text(m.emoji, style: const TextStyle(fontSize: 22)),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(m.label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        Muted(idx.isEmpty ? 'Not logged yet' : '${idx.length} ${idx.length == 1 ? 'item' : 'items'} · ${fmt(sub)} kcal'),
+                      ]),
+                    ),
+                    if (idx.isNotEmpty) Icon(isOpen ? Icons.expand_less : Icons.expand_more, color: p.muted),
+                    IconButton(
+                      tooltip: 'Add to ${m.label}',
+                      onPressed: () => openAddFood(context, store, day, meal: m.id),
+                      icon: Icon(Icons.add_circle_outline, color: p.brand, size: 26),
+                    ),
+                  ]),
+                ),
+              ),
+              if (isOpen)
+                for (final i in idx) _EntryRow(store: store, day: day, index: i),
+            ]);
+          }),
+      ],
     );
   }
 }
@@ -324,28 +259,20 @@ class _EntryRow extends StatelessWidget {
   final int index;
   @override
   Widget build(BuildContext context) {
-    final p = Pal.of(context);
     final e = store.c.entriesOn(day)[index];
-    final lv = levelOf(e.kcal);
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.only(top: 8),
-      decoration: BoxDecoration(border: Border(top: BorderSide(color: p.line))),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(52, 0, 4, 4),
       child: Row(children: [
-        EmojiBox(emojiFor(e.f, store.c.food(e.f)?.cat ?? ''), size: 34, bg: p.levelSoft(lv), radius: 10),
-        gap12,
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(e.name, style: const TextStyle(fontSize: 15)),
-            Muted('${qtyUnit(e.qty, e.unit)}${e.hunger != null ? ' · hunger ${e.hunger}/5' : ''}', size: 12),
+            Text(e.name, style: const TextStyle(fontSize: 14)),
+            Muted(qtyUnit(e.qty, e.unit), size: 12),
           ]),
         ),
-        Text(fmt(e.total), style: const TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(width: 6),
+        Text(fmt(e.total), style: const TextStyle(fontWeight: FontWeight.w600)),
         IconButton(
           tooltip: 'Remove ${e.name}',
-          style: IconButton.styleFrom(backgroundColor: p.surface2, minimumSize: const Size(30, 30), padding: EdgeInsets.zero),
-          icon: Icon(Icons.close, size: 16, color: p.muted),
+          icon: Icon(Icons.close, size: 18, color: Pal.of(context).muted),
           onPressed: () {
             final removed = store.removeEntry(day, index);
             toast(context, 'Removed ${removed.name}');
