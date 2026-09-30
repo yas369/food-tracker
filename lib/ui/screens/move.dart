@@ -125,6 +125,16 @@ class _MoveScreenState extends State<MoveScreen> {
         )
       else if (sensor.supported && sensor.lastReading == null)
         _status(p, Icons.hourglass_empty, 'Waiting for your phone’s step sensor. Walk a few steps and the count will move.'),
+      if (sensor.supported && mv.on && sensor.granted && mv.background && !sensor.batteryExempt)
+        AppCard(
+          color: p.medSoft,
+          child: Row(children: [
+            Icon(Icons.battery_alert, color: p.med),
+            gap12,
+            const Expanded(child: Text('Battery saving on this phone may stop step counting while Plate Check is closed.')),
+            TextButton(onPressed: sensor.askBatteryExempt, child: const Text('Allow')),
+          ]),
+        ),
       if (mv.on && (mv.manual[k] ?? -1) >= (mv.days[k] ?? 0))
         _status(p, Icons.watch_outlined,
             'Showing the ${fmt(mv.manual[k]!)} steps you typed in from a watch; the phone has counted ${fmt(mv.days[k] ?? 0)}. Clear the watch steps in Settings to use the phone’s count.'),
@@ -180,7 +190,9 @@ class _MoveScreenState extends State<MoveScreen> {
           Muted('Distance is steps × your stride of ${fmt(c.strideCm)} cm${c.strideMeasured ? ', as you measured it' : ', estimated from your height. Measure it in Settings below for a truer distance'}. Distance doesn’t change calories burnt; steps do.'),
           if (sensor.supported && mv.on) ...[
             gap8,
-            const Muted('Steps come from your phone’s step sensor. On some phones it only counts reliably if you open Plate Check about once a day.'),
+            Muted(mv.background
+                ? 'Steps come from your phone’s step sensor, which keeps counting while Plate Check is closed (that’s the small “Counting your steps” notification). They show up here when you open the app.'
+                : 'Steps come from your phone’s step sensor, only while Plate Check is open. Switch on counting with the app closed in Settings below, or many phones miss most of your steps.'),
           ],
         ],
       ),
@@ -202,6 +214,14 @@ class _MoveScreenState extends State<MoveScreen> {
             TextButton(onPressed: () => openStride(context, store), child: Text(c.strideMeasured ? 'Measure again' : 'Measure')),
           ]),
           gap8,
+          if (sensor.supported)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Count steps with the app closed'),
+              subtitle: const Text('Shows a small “Counting your steps” notification. The phone’s step chip does the counting, so it uses very little battery.'),
+              value: mv.background,
+              onChanged: mv.on ? store.setBackgroundSteps : null,
+            ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Add calories I burn to my food limit'),

@@ -19,7 +19,9 @@ class AppStore extends ChangeNotifier {
       : storage = storage ?? Storage(),
         notifications = notifications ?? Notifications(),
         steps = steps ?? StepSensor(),
-        _clock = clock ?? DateTime.now;
+        _clock = clock ?? DateTime.now {
+    this.steps.clock = _clock;
+  }
 
   final Storage storage;
   final Notifications notifications;
@@ -225,18 +227,60 @@ class AppStore extends ChangeNotifier {
 
   // ---------- Move ----------
 
+  int _stepsSavedAt = 0;
+  bool _stepsUnsaved = false;
+
+  /// A reading while the app is open. While walking one arrives with every
+  /// step, so the screen updates each time but the save file at most every
+  /// 30 seconds. An unsaved reading isn't lost: the counter is a running total,
+  /// so the next reading after a restart makes up the difference.
   void _onSteps(double count, int boot, int at) {
-    final before = c.stepsOn(today).round();
     recordSteps(d.move, count, boot, at, today);
+    final t = DateTime.now().millisecondsSinceEpoch;
+    if (t - _stepsSavedAt > 30000) {
+      _stepsSavedAt = t;
+      _stepsUnsaved = false;
+      save(reminders: false);
+    } else {
+      _stepsUnsaved = true;
+      notifyListeners();
+    }
+  }
+
+  /// Save a step reading still waiting (when the app goes to the background).
+  void saveSteps() {
+    if (!_stepsUnsaved) return;
+    _stepsUnsaved = false;
+    _stepsSavedAt = DateTime.now().millisecondsSinceEpoch;
     save(reminders: false);
-    if (c.stepsOn(today).round() != before) notifyListeners();
   }
 
   /// On start and whenever the app comes back: pick up a permission allowed
   /// in Android settings meanwhile, and start counting again if it stopped.
+  ///
+  /// Also takes in the steps counted in the background while the app was
+  /// closed, and keeps background counting on (or off) as chosen.
   Future<void> resumeSteps() async {
     await steps.checkPermission();
+    if (d.move.on && steps.granted) {
+      d.move.background ? await steps.startBackground() : await steps.stopBackground();
+      await steps.checkBattery();
+      final queued = await steps.takeBackgroundReadings();
+      if (queued.isNotEmpty) {
+        for (final (count, boot, at) in [...queued]..sort((a, b) => a.$3.compareTo(b.$3))) {
+          recordSteps(d.move, count, boot, at, today);
+        }
+        save(); // the day's limit may have grown, so re-plan reminders too
+      }
+    }
     if (d.move.on) steps.start(_onSteps);
+    notifyListeners();
+  }
+
+  Future<void> setBackgroundSteps(bool v) async {
+    d.move.background = v;
+    save(reminders: false);
+    v ? await steps.startBackground() : await steps.stopBackground();
     notifyListeners();
   }
 
@@ -246,7 +290,7 @@ class AppStore extends ChangeNotifier {
       ..on = true
       ..credit = true;
     save();
-    steps.start(_onSteps);
+    await resumeSteps();
   }
 
   void setCredit(bool v) {

@@ -86,8 +86,21 @@ minutes unless you allow *Alarms & reminders*, which the Me screen offers.
 
 The phone's step counter reports steps since the phone last started. The app
 keeps the last reading and credits the difference to the right days (split
-across midnight by time, with restarts detected from `/proc/uptime`). On some
-phones the counter only counts reliably if the app is opened about once a day.
+across midnight by time, with restarts detected from Android's own clock).
+
+On many phones the counter only counts while an app is listening, and Android
+stops closed apps from listening, so a walk with the app closed could come out
+as a few hundred steps. With *Count steps with the app closed* on (the default,
+in Move → Settings), a small foreground service keeps listening and shows a
+quiet "Counting your steps" notification, which Android requires. It lets the
+sensor batch readings for up to a minute, so the phone isn't woken for every
+step, and queues about one reading a minute. The app takes the queue in when it
+opens, skipping anything it had already counted. It starts again after the
+phone restarts. If battery saving could still stop it, Move offers to exempt
+Plate Check. Some brands (Xiaomi, Oppo, Vivo, Realme) also have an "Autostart"
+or "Background activity" switch in their own settings that needs to be on. While
+the app is open, the screen updates with every step but the save file is written
+at most every 30 seconds.
 
 Each time the app comes back to the screen it checks the "Physical activity"
 permission again and restarts the sensor if it had stopped, so allowing it in

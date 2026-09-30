@@ -400,6 +400,9 @@ void addSteps(Move mv, double n, int from, int to) {
 /// the difference from the last one to the right days.
 void recordSteps(Move mv, double c, int boot, int at, String today) {
   final prev = mv.last;
+  // Readings from the background queue can be older than one the app already
+  // took while open; those steps are already counted.
+  if (prev != null && at < prev.t) return;
   mv.last = StepReading(c, boot, at);
   if (prev == null) {
     // First reading: we only know today's steps if the phone restarted today.
