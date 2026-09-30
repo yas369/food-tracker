@@ -137,6 +137,7 @@ flutter build web     # a browser copy of the same app, handy for a quick look
 | `lib/services/` | Storage, old-data recovery, notifications, step sensor |
 | `lib/ui/` | Theme, shared widgets, icons and the screens. The app uses Material icons only, never emoji (a test checks) |
 | `test/` | Unit tests and screen tests (including a 360 px-wide phone in both themes) |
+| `archive/web-v1/` | The original web version, kept for reference; not built or shipped |
 
 ### The signing key
 
