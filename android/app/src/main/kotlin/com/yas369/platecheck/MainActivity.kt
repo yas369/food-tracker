@@ -28,6 +28,7 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
                     "drain" -> result.success(StepService.drain(this))
+                    "status" -> result.success(StepService.status(this))
                     "bootTime" -> result.success(StepService.bootTime())
                     "batteryExempt" -> {
                         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager

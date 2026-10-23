@@ -36,6 +36,12 @@ class StepService : Service(), SensorEventListener {
 
         private var cache: MutableList<String>? = null
         private var savedAt = 0L
+        private var lastAt = 0L
+
+        /** True while the service runs in this process. A phone that kills the
+         *  app's process (battery saving, Autostart off) leaves it false. */
+        @Volatile
+        var alive = false
 
         /** When the phone last started, from Android's own clock (includes sleep). */
         fun bootTime(): Long = System.currentTimeMillis() - SystemClock.elapsedRealtime()
@@ -54,8 +60,33 @@ class StepService : Service(), SensorEventListener {
                 .split('\n').filter { it.isNotBlank() }.toMutableList().also { cache = it }
 
         private fun save(ctx: Context) {
-            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(QUEUE, lines(ctx).joinToString("\n")).apply()
+            val edit = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(QUEUE, lines(ctx).joinToString("\n"))
+            if (lastAt > 0) edit.putLong("last_at", lastAt)
+            edit.apply()
             savedAt = SystemClock.elapsedRealtime()
+        }
+
+        /** Remember whether the service is running, and why it couldn't start. */
+        fun mark(ctx: Context, running: Boolean, error: String? = null) {
+            alive = running
+            val edit = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("running", running)
+            if (running) edit.remove("error") else if (error != null) edit.putString("error", error)
+            edit.apply()
+        }
+
+        /**
+         * For the app, when it opens: whether the phone shut the service down
+         * since it last ran (it was running, never stopped, and isn't alive
+         * now), when it last counted, and why it last failed to start.
+         */
+        @Synchronized
+        fun status(ctx: Context): Map<String, Any?> {
+            val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            return mapOf(
+                "stopped" to (prefs.getBoolean("enabled", false) && prefs.getBoolean("running", false) && !alive),
+                "lastAt" to maxOf(lastAt, prefs.getLong("last_at", 0L)),
+                "error" to prefs.getString("error", null),
+            )
         }
 
         private fun atOf(line: String): Long? = line.split(',').getOrNull(2)?.toLongOrNull()
@@ -65,6 +96,7 @@ class StepService : Service(), SensorEventListener {
         fun record(ctx: Context, count: Float, boot: Long, at: Long) {
             val q = lines(ctx)
             val line = "$count,$boot,$at"
+            lastAt = at
             // While walking the counter reports every step; one reading a minute is
             // plenty, so the newest replaces the last one within the same minute.
             val before = if (q.size >= 2) atOf(q[q.size - 2]) else null
@@ -103,20 +135,28 @@ class StepService : Service(), SensorEventListener {
             }
         } catch (e: Exception) {
             // Not allowed right now (permission missing, or started from the
-            // background on a newer Android). The app tries again when it opens.
+            // background on a newer Android). The app tries again when it opens,
+            // and shows why.
+            mark(this, false, "${e.javaClass.simpleName}: ${e.message ?: ""}")
             stopSelf()
             return
         }
         val sm = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val counter = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         if (counter == null) {
+            mark(this, false, "This phone has no step counter")
+            stopSelf()
+            return
+        }
+        // Let the sensor hold readings for up to a minute before waking the
+        // phone: the count is a running total, so nothing is lost by waiting.
+        if (!sm.registerListener(this, counter, SensorManager.SENSOR_DELAY_NORMAL, 60_000_000)) {
+            mark(this, false, "The step counter wouldn't start")
             stopSelf()
             return
         }
         sensors = sm
-        // Let the sensor hold readings for up to a minute before waking the
-        // phone: the count is a running total, so nothing is lost by waiting.
-        sm.registerListener(this, counter, SensorManager.SENSOR_DELAY_NORMAL, 60_000_000)
+        mark(this, true)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
@@ -124,6 +164,7 @@ class StepService : Service(), SensorEventListener {
     override fun onDestroy() {
         sensors?.unregisterListener(this)
         sensors = null
+        if (alive) mark(this, false) // stopped on purpose, not shut down by the phone
         flush(this)
         super.onDestroy()
     }

@@ -125,7 +125,37 @@ class _MoveScreenState extends State<MoveScreen> {
         )
       else if (sensor.supported && sensor.lastReading == null)
         _status(p, Icons.hourglass_empty, 'Waiting for your phone’s step sensor. Walk a few steps and the count will move.'),
-      if (sensor.supported && mv.on && sensor.granted && mv.background && !sensor.batteryExempt)
+      if (sensor.supported && mv.on && sensor.granted && mv.background && sensor.backgroundWasStopped)
+        AppCard(
+          color: p.highSoft,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(Icons.warning_amber, color: p.high),
+              gap12,
+              const Expanded(child: Text('Step counting stopped while Plate Check was closed', style: TextStyle(fontWeight: FontWeight.w700))),
+            ]),
+            gap8,
+            Text('Your phone shut it down${sensor.backgroundLastReading == null ? '' : ' after ${_when(sensor.backgroundLastReading!)}'}, so steps after that '
+                'weren’t counted. To keep it running, set Plate Check’s battery use to “Unrestricted”. On Xiaomi, Redmi, Poco, Oppo, Realme, Vivo or OnePlus, '
+                'also turn on “Autostart”. Both are on Plate Check’s page in Android settings.'),
+            gap8,
+            Wrap(spacing: 8, children: [
+              if (!sensor.batteryExempt) TextButton(onPressed: sensor.askBatteryExempt, child: const Text('Allow background use')),
+              TextButton(onPressed: sensor.openSettings, child: const Text('Open app settings')),
+            ]),
+          ]),
+        )
+      else if (sensor.supported && mv.on && sensor.granted && mv.background && sensor.backgroundError != null)
+        AppCard(
+          color: p.medSoft,
+          child: Row(children: [
+            Icon(Icons.info_outline, color: p.med),
+            gap12,
+            Expanded(child: Text('Android didn’t let Plate Check count steps with the app closed (${sensor.backgroundError}).')),
+            TextButton(onPressed: sensor.openSettings, child: const Text('Settings')),
+          ]),
+        )
+      else if (sensor.supported && mv.on && sensor.granted && mv.background && !sensor.batteryExempt)
         AppCard(
           color: p.medSoft,
           child: Row(children: [
@@ -250,6 +280,16 @@ class _MoveScreenState extends State<MoveScreen> {
         ],
       ),
     ]);
+  }
+
+  /// "4:30 pm", "yesterday at 4:30 pm" or "21 Oct at 4:30 pm".
+  String _when(DateTime t) {
+    final time = clock12('${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}');
+    final day = keyOf(t);
+    if (day == store.today) return time;
+    if (day == addDays(store.today, -1)) return 'yesterday at $time';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${t.day} ${months[t.month - 1]} at $time';
   }
 
   Widget _status(Pal p, IconData icon, String text) => Padding(

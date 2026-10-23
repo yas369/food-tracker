@@ -263,6 +263,7 @@ class AppStore extends ChangeNotifier {
   Future<void> resumeSteps() async {
     await steps.checkPermission();
     if (d.move.on && steps.granted) {
+      if (d.move.background) await steps.checkBackground(); // before restarting it
       d.move.background ? await steps.startBackground() : await steps.stopBackground();
       await steps.checkBattery();
       final queued = await steps.takeBackgroundReadings();

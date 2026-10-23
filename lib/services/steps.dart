@@ -34,6 +34,15 @@ class StepSensor {
   /// phones stop background counting anyway.
   bool batteryExempt = true;
 
+  /// The phone shut background counting down since the app last ran (many
+  /// brands do this to save battery). Steps after [backgroundLastReading]
+  /// were missed.
+  bool backgroundWasStopped = false;
+  DateTime? backgroundLastReading;
+
+  /// Why Android last refused to start background counting, if it did.
+  String? backgroundError;
+
   static const _channel = MethodChannel('platecheck/steps');
 
   /// The time readings are stamped with (the app's clock, so tests can fix it).
@@ -79,6 +88,19 @@ class StepSensor {
         for (final r in raw)
           if (r is List && r.length == 3 && r.every((x) => x is num)) ((r[0] as num).toDouble(), (r[1] as num).toInt(), (r[2] as num).toInt()),
     ];
+  }
+
+  /// Ask the Android side how background counting has gone since the app
+  /// last ran. Call before starting it again.
+  Future<void> checkBackground() async {
+    if (!supported) return;
+    final s = await native('status');
+    if (s is! Map) return;
+    backgroundWasStopped = s['stopped'] == true;
+    final at = s['lastAt'];
+    backgroundLastReading = at is int && at > 0 ? DateTime.fromMillisecondsSinceEpoch(at) : null;
+    final err = s['error'];
+    backgroundError = err is String && err.isNotEmpty ? err : null;
   }
 
   Future<void> checkBattery() async {

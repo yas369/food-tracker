@@ -42,10 +42,15 @@ class DrivenSteps extends StepSensor {
   bool backgroundOn = false;
   bool exempt = true;
   int askedExempt = 0;
+  Map<String, Object?> bgStatus = {'stopped': false, 'lastAt': 0, 'error': null};
+  final calls = <String>[];
 
   @override
   Future<Object?> native(String method) async {
+    calls.add(method);
     switch (method) {
+      case 'status':
+        return bgStatus;
       case 'start':
         backgroundOn = true;
       case 'stop':
@@ -270,5 +275,31 @@ void main() {
     s.exempt = true; // allowed in the dialog
     await comeBack(tester);
     expect(find.textContaining('Battery saving on this phone'), findsNothing);
+  });
+
+  testWidgets('if the phone shut background counting down, Move says when and what to change', (tester) async {
+    final (_, s) = await open(tester, PermissionStatus.denied);
+    s.bgStatus = {'stopped': true, 'lastAt': DateTime(2026, 9, 26, 9, 15).millisecondsSinceEpoch, 'error': null};
+    s.status = PermissionStatus.granted;
+    s.calls.clear();
+    await comeBack(tester);
+    expect(s.calls.indexOf('status'), lessThan(s.calls.indexOf('start')), reason: 'checked before restarting it');
+    expect(find.text('Step counting stopped while Plate Check was closed'), findsOneWidget);
+    expect(find.textContaining('shut it down after 9:15 am'), findsOneWidget);
+    await tester.tap(find.text('Open app settings'));
+    await tester.pumpAndSettle();
+    expect(s.settingsOpened, 1);
+
+    s.bgStatus = {'stopped': false, 'lastAt': DateTime(2026, 9, 26, 13, 0).millisecondsSinceEpoch, 'error': null};
+    await comeBack(tester);
+    expect(find.text('Step counting stopped while Plate Check was closed'), findsNothing, reason: 'it kept running this time');
+  });
+
+  testWidgets('if Android refused background counting, Move says why', (tester) async {
+    final (_, s) = await open(tester, PermissionStatus.denied);
+    s.bgStatus = {'stopped': false, 'lastAt': 0, 'error': 'SecurityException: not allowed'};
+    s.status = PermissionStatus.granted;
+    await comeBack(tester);
+    expect(find.textContaining('Android didn’t let Plate Check count steps with the app closed (SecurityException: not allowed)'), findsOneWidget);
   });
 }

@@ -97,7 +97,10 @@ sensor batch readings for up to a minute, so the phone isn't woken for every
 step, and queues about one reading a minute. The app takes the queue in when it
 opens, skipping anything it had already counted. It starts again after the
 phone restarts. If battery saving could still stop it, Move offers to exempt
-Plate Check. Some brands (Xiaomi, Oppo, Vivo, Realme) also have an "Autostart"
+Plate Check. If the phone shut the service down anyway while the app was
+closed, Move says so the next time it opens, with the time of the last
+counted steps and the settings to change. It does the same if Android
+refused to start the service, with the reason. Some brands (Xiaomi, Oppo, Vivo, Realme) also have an "Autostart"
 or "Background activity" switch in their own settings that needs to be on. While
 the app is open, the screen updates with every step but the save file is written
 at most every 30 seconds.
