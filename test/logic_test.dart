@@ -150,6 +150,18 @@ void main() {
     expect(jsonEncode(again.toJson()), jsonEncode(d.toJson()));
   });
 
+  test('a reading older than the last one is skipped (it is already counted)', () {
+    final mv = Move();
+    final boot = DateTime(2026, 9, 20).millisecondsSinceEpoch;
+    int at(int h, int m) => DateTime(2026, 9, 26, h, m).millisecondsSinceEpoch;
+    recordSteps(mv, 1000, boot, at(9, 0), '2026-09-26');
+    recordSteps(mv, 1500, boot, at(10, 0), '2026-09-26');
+    recordSteps(mv, 1200, boot, at(9, 30), '2026-09-26'); // late, from the background queue
+    recordSteps(mv, 1800, boot, at(11, 0), '2026-09-26');
+    expect(mv.days['2026-09-26'], 800);
+    expect(mv.last!.c, 1800);
+  });
+
   group('stride', () {
     test('distance uses your measured stride, or 41.5% of height', () {
       final c = Calc(withProfile(height: 172));

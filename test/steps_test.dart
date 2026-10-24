@@ -34,7 +34,41 @@ class DrivenSteps extends StepSensor {
   @override
   Future<void> openSettings() async => settingsOpened++;
   @override
-  Future<int> bootTime() async => DateTime(2026, 9, 20).millisecondsSinceEpoch; // phone started days ago
+  Future<int> bootTime() async => boot;
+
+  // The Android side: the background service's queue and battery settings.
+  static final boot = DateTime(2026, 9, 20).millisecondsSinceEpoch; // phone started days ago
+  final queue = <List<num>>[];
+  bool backgroundOn = false;
+  bool exempt = true;
+  int askedExempt = 0;
+  Map<String, Object?> bgStatus = {'stopped': false, 'lastAt': 0, 'error': null};
+  final calls = <String>[];
+
+  @override
+  Future<Object?> native(String method) async {
+    calls.add(method);
+    switch (method) {
+      case 'status':
+        return bgStatus;
+      case 'start':
+        backgroundOn = true;
+      case 'stop':
+        backgroundOn = false;
+      case 'drain':
+        final out = [...queue];
+        queue.clear();
+        return out;
+      case 'batteryExempt':
+        return exempt;
+      case 'askBatteryExempt':
+        askedExempt++;
+    }
+    return null;
+  }
+
+  /// A reading the background service took at [at] while the app was closed.
+  void counted(double count, DateTime at) => queue.add([count, boot, at.millisecondsSinceEpoch]);
 }
 
 Future<(AppStore, DrivenSteps)> open(WidgetTester tester, PermissionStatus status) async {
@@ -65,9 +99,22 @@ Future<void> reading(WidgetTester tester, DrivenSteps s, int count) async {
   await tester.pumpAndSettle();
 }
 
+/// Close the app (to the background) the way Android does, step by step.
+void leave(WidgetTester tester) {
+  for (final st in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+    tester.binding.handleAppLifecycleStateChanged(st);
+  }
+}
+
+void returnTo(WidgetTester tester) {
+  for (final st in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+    tester.binding.handleAppLifecycleStateChanged(st);
+  }
+}
+
 Future<void> comeBack(WidgetTester tester) async {
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  leave(tester);
+  returnTo(tester);
   await tester.pump(const Duration(seconds: 1));
   await tester.pumpAndSettle();
 }
@@ -173,5 +220,86 @@ void main() {
     await tester.tap(find.text('Save my stride'));
     await tester.pumpAndSettle();
     expect(store.d.move.stride, closeTo(76.92, .01));
+  });
+
+  testWidgets('a walk with the app closed is all counted when you open it again', (tester) async {
+    final (store, s) = await open(tester, PermissionStatus.granted);
+    expect(s.backgroundOn, isTrue, reason: 'counting carries on after the app closes');
+    await reading(tester, s, 5000); // 13:10, the app is open
+
+    // The app closes; the walk is 6 km, about 8,200 steps, counted by the service.
+    leave(tester);
+    for (var m = 1; m <= 60; m++) {
+      s.counted(5000 + 8200 * m / 60, DateTime(2026, 9, 26, 13, 20).add(Duration(minutes: m)));
+    }
+    returnTo(tester);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(store.c.stepsOn('2026-09-26'), closeTo(8200, 1));
+    expect(find.text('8,200'), findsOneWidget);
+    expect(s.queue, isEmpty, reason: 'taken in once');
+  });
+
+  testWidgets('background readings older than what the app already counted are not counted twice', (tester) async {
+    final (store, s) = await open(tester, PermissionStatus.granted);
+    await reading(tester, s, 5000); // 13:10 while open
+    s.counted(4900, DateTime(2026, 9, 26, 13, 5)); // from before: already in the 5000
+    s.counted(5600, DateTime(2026, 9, 26, 13, 40));
+    await comeBack(tester);
+    expect(store.c.stepsOn('2026-09-26'), 600);
+  });
+
+  testWidgets('counting with the app closed can be switched off', (tester) async {
+    final (store, s) = await open(tester, PermissionStatus.granted);
+    await reach(tester, find.text('Settings'));
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await reach(tester, find.text('Count steps with the app closed'));
+    await tester.tap(find.text('Count steps with the app closed'));
+    await tester.pumpAndSettle();
+    expect(store.d.move.background, isFalse);
+    expect(s.backgroundOn, isFalse);
+    await comeBack(tester);
+    expect(s.backgroundOn, isFalse, reason: 'stays off when the app comes back');
+  });
+
+  testWidgets('if battery saving may stop counting, Move offers to allow it', (tester) async {
+    final (_, s) = await open(tester, PermissionStatus.denied);
+    s.exempt = false;
+    s.status = PermissionStatus.granted;
+    await comeBack(tester);
+    expect(find.textContaining('Battery saving on this phone'), findsOneWidget);
+    await tester.tap(find.text('Allow'));
+    await tester.pumpAndSettle();
+    expect(s.askedExempt, 1);
+    s.exempt = true; // allowed in the dialog
+    await comeBack(tester);
+    expect(find.textContaining('Battery saving on this phone'), findsNothing);
+  });
+
+  testWidgets('if the phone shut background counting down, Move says when and what to change', (tester) async {
+    final (_, s) = await open(tester, PermissionStatus.denied);
+    s.bgStatus = {'stopped': true, 'lastAt': DateTime(2026, 9, 26, 9, 15).millisecondsSinceEpoch, 'error': null};
+    s.status = PermissionStatus.granted;
+    s.calls.clear();
+    await comeBack(tester);
+    expect(s.calls.indexOf('status'), lessThan(s.calls.indexOf('start')), reason: 'checked before restarting it');
+    expect(find.text('Step counting stopped while Plate Check was closed'), findsOneWidget);
+    expect(find.textContaining('shut it down after 9:15 am'), findsOneWidget);
+    await tester.tap(find.text('Open app settings'));
+    await tester.pumpAndSettle();
+    expect(s.settingsOpened, 1);
+
+    s.bgStatus = {'stopped': false, 'lastAt': DateTime(2026, 9, 26, 13, 0).millisecondsSinceEpoch, 'error': null};
+    await comeBack(tester);
+    expect(find.text('Step counting stopped while Plate Check was closed'), findsNothing, reason: 'it kept running this time');
+  });
+
+  testWidgets('if Android refused background counting, Move says why', (tester) async {
+    final (_, s) = await open(tester, PermissionStatus.denied);
+    s.bgStatus = {'stopped': false, 'lastAt': 0, 'error': 'SecurityException: not allowed'};
+    s.status = PermissionStatus.granted;
+    await comeBack(tester);
+    expect(find.textContaining('Android didn’t let Plate Check count steps with the app closed (SecurityException: not allowed)'), findsOneWidget);
   });
 }

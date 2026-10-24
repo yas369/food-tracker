@@ -100,6 +100,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   /// permissions (the user may have changed them in Android settings).
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.paused) store.saveSteps();
     if (s != AppLifecycleState.resumed) return;
     final t = store.today;
     if (t != lastToday) {
